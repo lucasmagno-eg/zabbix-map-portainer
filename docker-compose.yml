@@ -6,9 +6,10 @@ services:
     container_name: zabbix-backend
     restart: unless-stopped
     ports:
-      - "23001:3000"  # Backend API na 23001
+      - "23001:3000"
     volumes:
       - ./backend:/app
+      - ./backend/nginx.conf:/etc/nginx/nginx.conf:ro  # Config Nginx para backend
     working_dir: /app
     command: >
       sh -c "
@@ -19,6 +20,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - ALLOWED_ORIGINS=*
     networks:
       - zabbix-net
 
@@ -27,9 +29,10 @@ services:
     container_name: zabbix-frontend
     restart: unless-stopped
     ports:
-      - "23000:80"  # Frontend na 23000
+      - "23000:80"
     volumes:
       - ./frontend:/usr/share/nginx/html
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro  # Config específica
     depends_on:
       - zabbix-map-backend
     networks:
