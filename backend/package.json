@@ -1,17 +1,21 @@
 {
   "name": "zabbix-map-backend",
   "version": "1.0.0",
-  "description": "Backend API for Zabbix Map",
+  "description": "Backend API for Zabbix Map Visualization",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "axios": "^1.6.0"
   },
-  "keywords": ["zabbix", "map", "monitoring"],
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": ["zabbix", "map", "monitoring", "dashboard"],
   "author": "",
   "license": "MIT"
 }
