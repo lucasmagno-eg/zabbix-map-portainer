@@ -2,30 +2,30 @@ version: '3.8'
 
 services:
   backend:
-    build: ./backend
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: zabbix-map-backend
     restart: unless-stopped
     ports:
-      - "${BACKEND_PORT:-23001}:3000"
-    environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - HOST=0.0.0.0
+      - "23001:3000"
     networks:
       - zabbix-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]  # Testa endpoint raiz
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 10s
+      retries: 5
+      start_period: 40s  # Dá mais tempo para o Node.js iniciar
 
   frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: zabbix-map-frontend
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT:-23000}:80"
+      - "23000:80"
     depends_on:
       backend:
         condition: service_healthy
