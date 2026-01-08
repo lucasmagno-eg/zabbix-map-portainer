@@ -11,18 +11,14 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - HOST=0.0.0.0
-      # Futuras variáveis para Zabbix real:
-      # - ZABBIX_API_URL=${ZABBIX_API_URL}
-      # - ZABBIX_USER=${ZABBIX_USER}
-      # - ZABBIX_PASSWORD=${ZABBIX_PASSWORD}
     networks:
       - zabbix-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"] || ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s  # Tempo para o app iniciar antes dos testes
+      start_period: 10s
 
   frontend:
     build: ./frontend
@@ -35,12 +31,6 @@ services:
         condition: service_healthy
     networks:
       - zabbix-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80"] || ["CMD", "curl", "-f", "http://localhost:80"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 5s
 
 networks:
   zabbix-network:
