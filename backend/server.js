@@ -32,7 +32,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Iniciar servidor
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3003;
 app.listen(PORT, () => {
   console.log(`🚀 Backend rodando: http://localhost:${PORT}`);
   console.log(`📍 API Devices: http://localhost:${PORT}/api/devices`);
