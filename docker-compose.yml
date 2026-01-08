@@ -1,17 +1,18 @@
 version: '3.8'
 
 services:
-  backend:
+  zabbix-map-backend:
     image: node:18-alpine
     container_name: zabbix-backend
     restart: unless-stopped
     ports:
-      - "23001:3000"
+      - "23001:3000"  # 🔥 PUBLICAÇÃO EXPLÍCITA DA PORTA
     volumes:
       - ./backend:/app
     working_dir: /app
     command: >
       sh -c "
+      cd /app &&
       npm init -y &&
       npm install express cors &&
       node server.js
@@ -22,29 +23,34 @@ services:
       - HOST=0.0.0.0
     networks:
       - zabbix-net
+    healthcheck:  # 🔥 ADICIONAR HEALTHCHECK
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  frontend:
+  zabbix-map-frontend:
     image: nginx:alpine
     container_name: zabbix-frontend
     restart: unless-stopped
     ports:
-      - "23000:80"
+      - "23000:80"  # 🔥 PUBLICAÇÃO EXPLÍCITA DA PORTA
     volumes:
       - ./frontend:/usr/share/nginx/html:ro
-    # Comando para garantir que o index.html existe
-    command: >
-      sh -c "
-      # Verificar se o diretório tem conteúdo
-      echo 'Conteúdo do /usr/share/nginx/html:' &&
-      ls -la /usr/share/nginx/html/ &&
-      # Iniciar nginx
-      nginx -g 'daemon off;'
-      "
     depends_on:
-      - backend
+      zabbix-map-backend:
+        condition: service_healthy  # 🔥 ESPERAR BACKEND SAUDÁVEL
     networks:
       - zabbix-net
+    healthcheck:  # 🔥 ADICIONAR HEALTHCHECK
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   zabbix-net:
     driver: bridge
+    name: zabbix-map-network  # 🔥 NOME EXPLÍCITO DA REDE
