@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  zabbix-map-backend:
+  backend:
     image: node:18-alpine
     container_name: zabbix-backend
     restart: unless-stopped
@@ -14,7 +14,7 @@ services:
       sh -c "
       npm init -y &&
       npm install express cors &&
-      node server-enhanced.js
+      node server.js
       "
     environment:
       - NODE_ENV=production
@@ -23,17 +23,25 @@ services:
     networks:
       - zabbix-net
 
-  zabbix-map-frontend:
+  frontend:
     image: nginx:alpine
     container_name: zabbix-frontend
     restart: unless-stopped
     ports:
       - "23000:80"
     volumes:
-      - ./frontend:/usr/share/nginx/html:ro  # READ ONLY
-    # REMOVER a montagem do nginx.conf - vamos usar COPY ou config padrão
+      - ./frontend:/usr/share/nginx/html:ro
+    # Comando para garantir que o index.html existe
+    command: >
+      sh -c "
+      # Verificar se o diretório tem conteúdo
+      echo 'Conteúdo do /usr/share/nginx/html:' &&
+      ls -la /usr/share/nginx/html/ &&
+      # Iniciar nginx
+      nginx -g 'daemon off;'
+      "
     depends_on:
-      - zabbix-map-backend
+      - backend
     networks:
       - zabbix-net
 
