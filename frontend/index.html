@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa Zabbix - Portainer</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: Arial, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2d3748;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #718096;
+            font-size: 1.2em;
+        }
+        .portainer-badge {
+            display: inline-block;
+            background: #13b9ff;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-weight: bold;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        .map-container, .devices-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        #map {
+            height: 500px;
+            width: 100%;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+        .device-item {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 5px solid #4299e1;
+        }
+        .device-item.online { border-left-color: #48bb78; }
+        .device-item.warning { border-left-color: #ed8936; }
+        .device-item.offline { border-left-color: #f56565; }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .online { background: #48bb78; }
+        .warning { background: #ed8936; }
+        .offline { background: #f56565; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .stat-box {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .stat-number {
+            font-size: 3em;
+            font-weight: bold;
+            color: #4a5568;
+        }
+        footer {
+            text-align: center;
+            color: white;
+            padding: 30px;
+            margin-top: 40px;
+        }
+        .api-link {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗺️ Mapa de Dispositivos Zabbix</h1>
+            <p class="subtitle">Deployado via Portainer | Container Docker</p>
+            <div class="portainer-badge">🐳 Portainer Deploy</div>
+        </header>
+        
+        <div class="dashboard">
+            <div class="map-container">
+                <h2>🌍 Mapa do Brasil - Dispositivos</h2>
+                <div id="map"></div>
+            </div>
+            
+            <div class="devices-panel">
+                <h2>📡 Dispositivos Monitorados</h2>
+                <div id="devicesList">
+                    <!-- Lista de dispositivos carregada via JS -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-number" id="totalDevices">0</div>
+                <div>Dispositivos Totais</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="onlineDevices">0</div>
+                <div>Online</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="offlineDevices">0</div>
+                <div>Com Problemas</div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>⚡ Aplicação containerizada com Docker</p>
+        <p>🔧 Backend API: <span id="apiStatus">Verificando...</span></p>
+        <a href="http://localhost:3001/api/devices" target="_blank" class="api-link">
+            🌐 Testar API: /api/devices
+        </a>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Inicializar mapa
+        const map = L.map('map').setView([-15.7801, -47.9292], 4);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+        
+        // Carregar dispositivos
+        async function loadDevices() {
+            try {
+                const response = await fetch('http://localhost:3001/api/devices');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateUI(data.devices);
+                    document.getElementById('apiStatus').innerHTML = 
+                        '<span style="color:#48bb78">✅ Online</span>';
+                }
+            } catch (error) {
+                document.getElementById('apiStatus').innerHTML = 
+                    '<span style="color:#f56565">❌ Erro de conexão</span>';
+            }
+        }
+        
+        // Atualizar interface
+        function updateUI(devices) {
+            // Atualizar mapa
+            devices.forEach(device => {
+                const marker = L.marker([device.lat, device.lng]).addTo(map);
+                marker.bindPopup(`<b>${device.name}</b><br>${device.city}<br>Status: ${device.status}`);
+            });
+            
+            // Atualizar lista
+            const list = document.getElementById('devicesList');
+            list.innerHTML = devices.map(device => `
+                <div class="device-item ${device.status}">
+                    <div><span class="status-indicator ${device.status}"></span> <strong>${device.name}</strong></div>
+                    <div style="margin-top:8px; color:#666">📍 ${device.city}</div>
+                    <div style="font-size:0.9em; color:#888">🌐 ${device.lat.toFixed(4)}, ${device.lng.toFixed(4)}</div>
+                </div>
+            `).join('');
+            
+            // Atualizar estatísticas
+            document.getElementById('totalDevices').textContent = devices.length;
+            document.getElementById('onlineDevices').textContent = 
+                devices.filter(d => d.status === 'online').length;
+            document.getElementById('offlineDevices').textContent = 
+                devices.filter(d => d.status !== 'online').length;
+        }
+        
+        // Iniciar
+        loadDevices();
+        setInterval(loadDevices, 10000); // Atualizar a cada 10s
+    </script>
+</body>
+</html>
