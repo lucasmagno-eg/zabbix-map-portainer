@@ -1,56 +1,40 @@
 version: '3.8'
 
 services:
-  zabbix-map-backend:
-    image: node:18-alpine
-    container_name: zabbix-backend
+  backend:
+    build: ./backend
+    container_name: zabbix-map-backend
     restart: unless-stopped
     ports:
-      - "23001:3000"  # 🔥 PUBLICAÇÃO EXPLÍCITA DA PORTA
-    volumes:
-      - ./backend:/app
-    working_dir: /app
-    command: >
-      sh -c "
-      cd /app &&
-      npm init -y &&
-      npm install express cors &&
-      node server.js
-      "
+      - "${BACKEND_PORT:-23001}:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
       - HOST=0.0.0.0
+      # Futuras variáveis para Zabbix real:
+      # - ZABBIX_API_URL=${ZABBIX_API_URL}
+      # - ZABBIX_USER=${ZABBIX_USER}
+      # - ZABBIX_PASSWORD=${ZABBIX_PASSWORD}
     networks:
-      - zabbix-net
-    healthcheck:  # 🔥 ADICIONAR HEALTHCHECK
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      - zabbix-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
 
-  zabbix-map-frontend:
-    image: nginx:alpine
-    container_name: zabbix-frontend
+  frontend:
+    build: ./frontend
+    container_name: zabbix-map-frontend
     restart: unless-stopped
     ports:
-      - "23000:80"  # 🔥 PUBLICAÇÃO EXPLÍCITA DA PORTA
-    volumes:
-      - ./frontend:/usr/share/nginx/html:ro
+      - "${FRONTEND_PORT:-23000}:80"
     depends_on:
-      zabbix-map-backend:
-        condition: service_healthy  # 🔥 ESPERAR BACKEND SAUDÁVEL
+      backend:
+        condition: service_healthy
     networks:
-      - zabbix-net
-    healthcheck:  # 🔥 ADICIONAR HEALTHCHECK
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - zabbix-network
 
 networks:
-  zabbix-net:
+  zabbix-network:
     driver: bridge
-    name: zabbix-map-network  # 🔥 NOME EXPLÍCITO DA REDE
