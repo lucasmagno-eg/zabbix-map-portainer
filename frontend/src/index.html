@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa do Brasil - Dispositivos Zabbix</title>
+    <title>Mapa - Expresso Guanabara</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -50,6 +50,31 @@
         .subtitle {
             color: #a5d6ff;
             font-size: 1.1rem;
+        }
+
+        .location-info {
+            background: rgba(74, 158, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px auto;
+            max-width: 600px;
+            text-align: center;
+            border: 1px solid rgba(74, 158, 255, 0.3);
+        }
+
+        .location-info h3 {
+            color: #ffa726;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .location-info p {
+            color: #a5d6ff;
+            font-size: 0.95rem;
+            margin: 5px 0;
         }
 
         .dashboard {
@@ -292,10 +317,23 @@
             margin: 20px 0;
         }
 
+        /* Estilos para o polígono */
+        .area-polygon {
+            stroke: #ffa726;
+            stroke-width: 3;
+            stroke-dasharray: 10, 10;
+            fill: rgba(255, 167, 38, 0.1);
+            transition: all 0.3s;
+        }
+
+        .area-polygon:hover {
+            fill: rgba(255, 167, 38, 0.2);
+        }
+
         /* Estilos para o popup do mapa */
         .leaflet-popup-content {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            min-width: 200px;
+            min-width: 250px;
         }
 
         .leaflet-popup-content h3 {
@@ -372,13 +410,21 @@
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-map-marked-alt"></i> Mapa de Dispositivos Zabbix</h1>
-            <p class="subtitle">Monitoramento geográfico de dispositivos em tempo real</p>
+            <h1><i class="fas fa-map-marked-alt"></i> Mapa de Dispositivos - Expresso Guanabara</h1>
+            <p class="subtitle">Monitoramento geográfico dos equipamentos da Garagem Expresso Guanabara</p>
+            
+            <div class="location-info">
+                <h3><i class="fas fa-map-pin"></i> Área de Monitoramento</h3>
+                <p><strong>Local:</strong> Garagem Expresso Guanabara</p>
+                <p><strong>Coordenadas Centrais:</strong> -3.7915097788280088, -38.51085886125404</p>
+                <p><strong>Equipamentos Monitorados:</strong> Roteadores Aruba (Galpão, Portaria, Alojamento e outros)</p>
+                <p><strong>Raio de Cobertura:</strong> Aproximadamente 5km ao redor da garagem</p>
+            </div>
         </header>
 
         <div class="dashboard">
             <div class="map-container">
-                <h2><i class="fas fa-globe-americas"></i> Mapa do Brasil</h2>
+                <h2><i class="fas fa-globe-americas"></i> Mapa da Área da Expresso Guanabara</h2>
                 <div id="map"></div>
                 <div class="controls">
                     <div>
@@ -392,8 +438,8 @@
                             <button class="zoom-btn" id="zoomOut" title="Zoom Out">
                                 <i class="fas fa-search-minus"></i>
                             </button>
-                            <button class="zoom-btn" id="zoomToDevices" title="Centralizar nos dispositivos">
-                                <i class="fas fa-crosshairs"></i>
+                            <button class="zoom-btn" id="zoomToArea" title="Zoom na Área da Garagem">
+                                <i class="fas fa-expand"></i>
                             </button>
                         </div>
                     </div>
@@ -423,7 +469,7 @@
                 </div>
 
                 <div class="panel">
-                    <h2><i class="fas fa-server"></i> Dispositivos</h2>
+                    <h2><i class="fas fa-server"></i> Equipamentos da Área</h2>
                     <div class="device-list" id="deviceList">
                         <div class="loading">
                             <i class="fas fa-spinner fa-spin"></i> Carregando dispositivos...
@@ -434,7 +480,7 @@
         </div>
 
         <footer>
-            <p>Zabbix Map Dashboard • Desenvolvido para monitoramento de dispositivos • Dados atualizados em tempo real</p>
+            <p>Expresso Guanabara • Monitoramento de Equipamentos Aruba • Área da Garagem</p>
         </footer>
     </div>
 
@@ -445,78 +491,89 @@
         let map;
         let markers = [];
         let deviceData = [];
-        let stateData = [];
-
-        // Função para calcular o melhor zoom e centro
-        function calculateMapView(devices) {
-            if (!devices || devices.length === 0) {
-                return {
-                    center: [-15.7801, -47.9292], // Centro do Brasil
-                    zoom: 4
-                };
-            }
-
-            // Filtra dispositivos com coordenadas válidas
-            const validDevices = devices.filter(d => d.lat && d.lon);
-            
-            if (validDevices.length === 0) {
-                return {
-                    center: [-15.7801, -47.9292],
-                    zoom: 4
-                };
-            }
-
-            // Calcula o centro dos dispositivos
-            const lats = validDevices.map(d => d.lat);
-            const lons = validDevices.map(d => d.lon);
-            
-            const center = [
-                (Math.min(...lats) + Math.max(...lats)) / 2,
-                (Math.min(...lons) + Math.max(...lons)) / 2
+        let areaPolygon;
+        
+        // Coordenadas da Garagem Expresso Guanabara (centro da área)
+        const GARAGEM_CENTER = [-3.7915097788280088, -38.51085886125404];
+        
+        // Definir área de cobertura (aproximadamente 5km ao redor)
+        const AREA_RADIUS = 0.05; // Em graus (aproximadamente 5.5km)
+        
+        // Criar polígono da área
+        function createAreaPolygon() {
+            // Cria um retângulo em torno das coordenadas centrais
+            const bounds = [
+                [GARAGEM_CENTER[0] - AREA_RADIUS, GARAGEM_CENTER[1] - AREA_RADIUS], // Sudoeste
+                [GARAGEM_CENTER[0] + AREA_RADIUS, GARAGEM_CENTER[1] + AREA_RADIUS]  // Nordeste
             ];
-
-            // Calcula o zoom baseado na dispersão
-            const latDiff = Math.max(...lats) - Math.min(...lats);
-            const lonDiff = Math.max(...lons) - Math.min(...lons);
-            const maxDiff = Math.max(latDiff, lonDiff);
-
-            let zoom;
-            if (maxDiff > 20) zoom = 4;
-            else if (maxDiff > 10) zoom = 5;
-            else if (maxDiff > 5) zoom = 6;
-            else if (maxDiff > 2) zoom = 7;
-            else if (maxDiff > 1) zoom = 8;
-            else if (maxDiff > 0.5) zoom = 9;
-            else if (maxDiff > 0.2) zoom = 10;
-            else if (maxDiff > 0.1) zoom = 11;
-            else zoom = 12;
-
-            // Limita o zoom máximo para 18 (street level) e mínimo para 3
-            zoom = Math.min(Math.max(zoom, 3), 18);
-
-            return { center, zoom };
+            
+            // Cria o polígono retangular
+            areaPolygon = L.rectangle(bounds, {
+                color: "#ffa726",
+                weight: 3,
+                opacity: 0.8,
+                dashArray: "10, 10",
+                fillColor: "#ffa726",
+                fillOpacity: 0.1,
+                className: 'area-polygon'
+            }).addTo(map);
+            
+            // Adiciona popup ao polígono
+            areaPolygon.bindPopup(`
+                <div style="min-width: 200px;">
+                    <h3 style="color: #ffa726; margin: 0 0 10px 0;">
+                        <i class="fas fa-warehouse"></i> Área da Expresso Guanabara
+                    </h3>
+                    <p><strong>Centro:</strong> ${GARAGEM_CENTER[0].toFixed(6)}, ${GARAGEM_CENTER[1].toFixed(6)}</p>
+                    <p><strong>Raio Aproximado:</strong> 5km</p>
+                    <p><strong>Equipamentos Monitorados:</strong></p>
+                    <ul style="margin: 5px 0; padding-left: 15px;">
+                        <li>Roteador Aruba - Galpão</li>
+                        <li>Roteador Aruba - Portaria</li>
+                        <li>Roteador Aruba - Alojamento</li>
+                        <li>Outros equipamentos da região</li>
+                    </ul>
+                </div>
+            `);
+            
+            return areaPolygon;
+        }
+        
+        // Zoom na área da garagem
+        function zoomToArea() {
+            if (areaPolygon) {
+                map.fitBounds(areaPolygon.getBounds());
+            } else {
+                map.setView(GARAGEM_CENTER, 14);
+            }
         }
 
         // Inicialização do mapa
         function initMap() {
-            // Começa com zoom do Brasil, será ajustado depois
+            // Inicia o mapa centralizado na garagem
             map = L.map('map', {
-                zoomControl: false, // Desativa controle padrão para personalizar
-                maxZoom: 18, // Aumentado de 10 para 18 (street level)
-                minZoom: 3
-            }).setView([-15.7801, -47.9292], 4);
+                zoomControl: false,
+                maxZoom: 18,
+                minZoom: 12 // Zoom mínimo maior para manter foco na área
+            }).setView(GARAGEM_CENTER, 14); // Zoom nível 14 para área local
 
             // Tile layer do OpenStreetMap
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors',
                 maxZoom: 18,
-                minZoom: 3
+                minZoom: 12
             }).addTo(map);
 
-            // Adiciona controle de zoom personalizado
+            // Adiciona controle de zoom
             L.control.zoom({
                 position: 'topright'
             }).addTo(map);
+            
+            // Cria o polígono da área
+            createAreaPolygon();
+            
+            // Aplica zoom na área
+            zoomToArea();
 
             loadData();
         }
@@ -527,19 +584,16 @@
                 document.getElementById('deviceList').innerHTML = 
                     '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando dispositivos...</div>';
                 
-                // Carrega estados e dispositivos em paralelo
-                const [statesResponse, devicesResponse] = await Promise.all([
-                    fetch(`${API_BASE_URL}/states`),
-                    fetch(`${API_BASE_URL}/devices`)
-                ]);
-
-                if (!statesResponse.ok || !devicesResponse.ok) {
+                const devicesResponse = await fetch(`${API_BASE_URL}/devices`);
+                
+                if (!devicesResponse.ok) {
                     throw new Error('Erro ao carregar dados da API');
                 }
 
-                stateData = await statesResponse.json();
                 deviceData = await devicesResponse.json();
-
+                
+                // Filtra dispositivos que estão dentro ou próximos da área
+                filterDevicesInArea();
                 updateStats();
                 renderDeviceList();
                 plotDevicesOnMap();
@@ -553,19 +607,51 @@
                     </div>`;
             }
         }
+        
+        // Filtra dispositivos dentro da área da garagem
+        function filterDevicesInArea() {
+            if (!deviceData || deviceData.length === 0) return;
+            
+            // Calcula distância de cada dispositivo em relação ao centro da garagem
+            deviceData.forEach(device => {
+                if (device.lat && device.lon) {
+                    // Distância aproximada em graus (simplificada)
+                    const latDiff = Math.abs(device.lat - GARAGEM_CENTER[0]);
+                    const lonDiff = Math.abs(device.lon - GARAGEM_CENTER[1]);
+                    
+                    // Marca se está dentro da área (5km = ~0.045 graus)
+                    device.inArea = (latDiff <= AREA_RADIUS * 1.5 && lonDiff <= AREA_RADIUS * 1.5);
+                    
+                    // Calcula distância aproximada em km
+                    const latKm = latDiff * 111; // 1 grau latitude ≈ 111km
+                    const lonKm = lonDiff * 111 * Math.cos(GARAGEM_CENTER[0] * Math.PI / 180);
+                    device.distanceFromCenter = Math.sqrt(latKm*latKm + lonKm*lonKm).toFixed(1);
+                } else {
+                    device.inArea = false;
+                    device.distanceFromCenter = null;
+                }
+            });
+            
+            // Ordena por proximidade
+            deviceData.sort((a, b) => {
+                if (a.distanceFromCenter === null) return 1;
+                if (b.distanceFromCenter === null) return -1;
+                return a.distanceFromCenter - b.distanceFromCenter;
+            });
+        }
 
         // Atualiza estatísticas
         function updateStats() {
-            const totalDevices = deviceData.length;
-            const onlineDevices = deviceData.filter(d => d.status === 'online').length;
-            const warningDevices = deviceData.filter(d => d.status === 'warning').length;
-            const offlineDevices = deviceData.filter(d => d.status === 'offline').length;
-            const statesWithDevices = [...new Set(deviceData.map(d => d.state))].length;
+            const devicesInArea = deviceData.filter(d => d.inArea);
+            const totalDevices = devicesInArea.length;
+            const onlineDevices = devicesInArea.filter(d => d.status === 'online').length;
+            const warningDevices = devicesInArea.filter(d => d.status === 'warning').length;
+            const offlineDevices = devicesInArea.filter(d => d.status === 'offline').length;
 
             document.getElementById('statsContainer').innerHTML = `
                 <div class="stat-card">
                     <div class="stat-value">${totalDevices}</div>
-                    <div class="stat-label">Total de Dispositivos</div>
+                    <div class="stat-label">Equipamentos na Área</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value">${onlineDevices}</div>
@@ -576,8 +662,8 @@
                     <div class="stat-label">Warning</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">${statesWithDevices}</div>
-                    <div class="stat-label">Estados</div>
+                    <div class="stat-value">${offlineDevices}</div>
+                    <div class="stat-label">Offline</div>
                 </div>
             `;
         }
@@ -586,32 +672,26 @@
         function renderDeviceList() {
             const deviceList = document.getElementById('deviceList');
             
-            if (deviceData.length === 0) {
-                deviceList.innerHTML = '<div class="error">Nenhum dispositivo encontrado</div>';
+            const devicesInArea = deviceData.filter(d => d.inArea);
+            
+            if (devicesInArea.length === 0) {
+                deviceList.innerHTML = '<div class="error">Nenhum dispositivo na área da garagem</div>';
                 return;
             }
 
-            deviceList.innerHTML = deviceData.map(device => {
-                // Extrai cidade e estado da localização
-                let city = 'Não informada';
-                let state = device.state || 'SP';
+            deviceList.innerHTML = devicesInArea.map(device => {
+                // Extrai cidade e estado
+                let city = 'Garagem Expresso Guanabara';
+                let state = 'CE';
                 
                 if (device.location && device.location !== 'Localização não informada') {
-                    // Tenta extrair cidade antes da vírgula
                     const locationParts = device.location.split(',');
                     if (locationParts.length >= 2) {
                         city = locationParts[0].trim();
-                        // Pega o estado (último item depois da última vírgula)
                         state = locationParts[locationParts.length - 1].trim().toUpperCase();
-                    } else {
-                        city = device.location;
                     }
                 }
                 
-                // Salva cidade extraída para uso posterior
-                device.extractedCity = city;
-                device.extractedState = state;
-
                 return `
                     <div class="device-item" data-device-id="${device.id}" data-lat="${device.lat}" data-lon="${device.lon}">
                         <div class="device-header">
@@ -630,21 +710,21 @@
                                 <i class="fas fa-map-marker-alt"></i>
                                 ${city}, ${state}
                             </div>
-                            <div><strong>IP:</strong> ${device.ip || 'N/A'}</div>
+                            <div><strong>Distância:</strong> ${device.distanceFromCenter}km do centro</div>
                             <div><strong>Última verificação:</strong> ${formatDate(device.lastCheck)}</div>
-                            ${device.hasExactCoords ? '<div><small><i class="fas fa-check-circle"></i> Coordenadas precisas</small></div>' : ''}
+                            ${device.hasExactCoords ? '<div><small><i class="fas fa-crosshairs"></i> Localização precisa</small></div>' : ''}
                         </div>
                     </div>
                 `;
             }).join('');
 
-            // Adiciona eventos de clique aos itens da lista
+            // Eventos de clique nos dispositivos
             document.querySelectorAll('.device-item').forEach(item => {
                 item.addEventListener('click', function() {
                     const lat = parseFloat(this.dataset.lat);
                     const lon = parseFloat(this.dataset.lon);
                     if (!isNaN(lat) && !isNaN(lon)) {
-                        map.setView([lat, lon], 15); // Zoom nível 15 (muito próximo)
+                        map.setView([lat, lon], 16);
                     }
                 });
             });
@@ -652,98 +732,90 @@
 
         // Plota dispositivos no mapa
         function plotDevicesOnMap() {
-            // Remove marcadores antigos
             markers.forEach(marker => map.removeLayer(marker));
             markers = [];
 
-            // Filtra dispositivos com coordenadas válidas
-            const validDevices = deviceData.filter(d => d.lat && d.lon);
+            const devicesInArea = deviceData.filter(d => d.inArea && d.lat && d.lon);
             
-            if (validDevices.length === 0) {
-                console.log('Nenhum dispositivo com coordenadas válidas');
-                return;
-            }
-
-            // Adiciona marcadores para cada dispositivo
-            validDevices.forEach(device => {
+            devicesInArea.forEach(device => {
                 const iconColor = getStatusColor(device.status);
+                
+                // Ícone personalizado baseado no tipo e status
+                let iconHtml = '';
+                if (device.name.includes('Galpão')) {
+                    iconHtml = '<i class="fas fa-warehouse"></i>';
+                } else if (device.name.includes('Portaria')) {
+                    iconHtml = '<i class="fas fa-door-closed"></i>';
+                } else if (device.name.includes('Alojamento')) {
+                    iconHtml = '<i class="fas fa-bed"></i>';
+                } else {
+                    iconHtml = `<i class="fas fa-${getDeviceIcon(device.type)}"></i>`;
+                }
                 
                 const customIcon = L.divIcon({
                     html: `<div style="
                         background-color: ${iconColor};
-                        width: 24px;
-                        height: 24px;
+                        width: 28px;
+                        height: 28px;
                         border-radius: 50%;
                         border: 3px solid white;
-                        box-shadow: 0 0 10px rgba(0,0,0,0.7);
+                        box-shadow: 0 0 12px rgba(0,0,0,0.8);
                         display: flex;
                         align-items: center;
                         justify-content: center;
                         color: white;
-                        font-size: 12px;
+                        font-size: 14px;
                         font-weight: bold;
                         cursor: pointer;
-                        transition: transform 0.3s;
                     ">
-                        <i class="fas fa-${getDeviceIcon(device.type)}"></i>
+                        ${iconHtml}
                     </div>`,
                     className: 'custom-marker',
-                    iconSize: [30, 30],
-                    iconAnchor: [15, 30]
+                    iconSize: [34, 34],
+                    iconAnchor: [17, 34]
                 });
 
-                // Extrai cidade para o popup
-                let city = device.extractedCity || 'Não informada';
-                let state = device.extractedState || device.state || 'SP';
-                
                 const marker = L.marker([device.lat, device.lon], { 
                     icon: customIcon,
                     title: device.name
                 })
                 .addTo(map)
                 .bindPopup(`
-                    <div style="min-width: 250px;">
+                    <div style="min-width: 280px;">
                         <h3 style="margin: 0 0 10px 0; color: #2c3e50; border-bottom: 2px solid ${iconColor}; padding-bottom: 5px;">
-                            <i class="fas fa-${getDeviceIcon(device.type)}"></i> ${device.name}
+                            ${iconHtml} ${device.name}
                         </h3>
                         <p><strong>Tipo:</strong> ${device.type}</p>
                         <p><strong>Status:</strong> <span class="popup-status" style="background: ${iconColor};">${device.status.toUpperCase()}</span></p>
-                        <p><strong>Local:</strong> ${city}, ${state}</p>
+                        <p><strong>Local:</strong> ${device.location || 'Garagem Expresso Guanabara'}</p>
                         <p><strong>IP:</strong> ${device.ip || 'N/A'}</p>
                         <p><strong>Coordenadas:</strong> ${device.lat.toFixed(6)}, ${device.lon.toFixed(6)}</p>
+                        <p><strong>Distância do centro:</strong> ${device.distanceFromCenter}km</p>
                         <p><strong>Última verificação:</strong> ${formatDate(device.lastCheck)}</p>
-                        ${device.hasExactCoords ? '<p><small><i class="fas fa-check-circle" style="color: #2ecc71;"></i> Coordenadas precisas do inventário</small></p>' : ''}
-                        <hr style="margin: 10px 0;">
-                        <p style="font-size: 0.8rem; color: #666;">
-                            <i class="fas fa-mouse-pointer"></i> Clique no mapa para fechar<br>
-                            <i class="fas fa-search-plus"></i> Use a roda do mouse para zoom
-                        </p>
+                        ${device.hasExactCoords ? '<p><i class="fas fa-check-circle" style="color: #2ecc71;"></i> Coordenadas precisas do inventário</p>' : ''}
                     </div>
                 `);
 
-                // Efeito de hover no marcador
                 marker.on('mouseover', function() {
                     this.openPopup();
                 });
 
                 markers.push(marker);
             });
-
-            // Ajusta a visualização do mapa para mostrar todos os dispositivos
-            adjustMapView();
-        }
-
-        // Ajusta a visualização do mapa
-        function adjustMapView() {
-            const validDevices = deviceData.filter(d => d.lat && d.lon);
             
-            if (validDevices.length === 0) {
-                map.setView([-15.7801, -47.9292], 4);
-                return;
+            // Se houver dispositivos, ajusta a visualização para mostrar todos
+            if (markers.length > 0) {
+                const group = new L.featureGroup(markers);
+                const bounds = group.getBounds();
+                
+                // Combina os bounds dos marcadores com a área do polígono
+                if (areaPolygon) {
+                    const areaBounds = areaPolygon.getBounds();
+                    bounds.extend(areaBounds);
+                }
+                
+                map.fitBounds(bounds.pad(0.1));
             }
-
-            const view = calculateMapView(validDevices);
-            map.setView(view.center, view.zoom);
         }
 
         // Funções auxiliares
@@ -752,8 +824,7 @@
                 'router': 'wifi',
                 'switch': 'sitemap',
                 'server': 'server',
-                'firewall': 'shield-alt',
-                'loadbalancer': 'balance-scale'
+                'firewall': 'shield-alt'
             };
             return icons[type] || 'desktop';
         }
@@ -779,40 +850,20 @@
 
         // Event Listeners
         document.getElementById('refreshData').addEventListener('click', loadData);
-        
-        document.getElementById('zoomIn').addEventListener('click', () => {
-            map.zoomIn();
-        });
-        
-        document.getElementById('zoomOut').addEventListener('click', () => {
-            map.zoomOut();
-        });
-        
-        document.getElementById('zoomToDevices').addEventListener('click', () => {
-            adjustMapView();
-        });
+        document.getElementById('zoomIn').addEventListener('click', () => map.zoomIn());
+        document.getElementById('zoomOut').addEventListener('click', () => map.zoomOut());
+        document.getElementById('zoomToArea').addEventListener('click', zoomToArea);
 
         // Atalhos de teclado
         document.addEventListener('keydown', (e) => {
-            if (e.key === '+' || e.key === '=') {
-                map.zoomIn();
-                e.preventDefault();
-            } else if (e.key === '-' || e.key === '_') {
-                map.zoomOut();
-                e.preventDefault();
-            } else if (e.key === '0') {
-                adjustMapView();
-                e.preventDefault();
-            } else if (e.key === 'r' || e.key === 'R') {
-                loadData();
-                e.preventDefault();
-            }
+            if (e.key === '+') map.zoomIn();
+            else if (e.key === '-') map.zoomOut();
+            else if (e.key === 'a' || e.key === 'A') zoomToArea();
+            else if (e.key === 'r' || e.key === 'R') loadData();
         });
 
-        // Inicializa quando a página carrega
+        // Inicialização
         document.addEventListener('DOMContentLoaded', initMap);
-
-        // Atualiza automático a cada 60 segundos
         setInterval(loadData, 60000);
     </script>
 </body>
