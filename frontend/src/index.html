@@ -391,12 +391,26 @@
             return DEVICE_ICONS.default;
         }
 
+        // Função para criar um pequeno deslocamento para dispositivos próximos
+        function calculateOffset(index, total, baseLat, baseLon) {
+            if (total <= 1) return { lat: baseLat, lon: baseLon };
+            
+            // Se há múltiplos dispositivos no mesmo local, distribui em círculo
+            const radius = 0.000015; // Aproximadamente 1.5 metros em graus
+            const angle = (2 * Math.PI * index) / total;
+            
+            return {
+                lat: baseLat + (radius * Math.cos(angle)),
+                lon: baseLon + (radius * Math.sin(angle))
+            };
+        }
+
         // Inicialização do mapa
         function initMap() {
             map = L.map('map', {
                 zoomControl: true,
                 maxZoom: 20,
-                minZoom: 16 // Diminuí o zoom mínimo para permitir mais zoom out
+                minZoom: 16
             }).setView(MONITORING_AREA.center, MONITORING_AREA.zoom);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -527,7 +541,7 @@
             }).join('');
         }
 
-        // Plota dispositivos
+        // Plota dispositivos com spiderfying para coordenadas próximas
         function plotDevicesOnMap() {
             // Remove marcadores antigos
             markers.forEach(marker => map.removeLayer(marker));
@@ -535,40 +549,65 @@
 
             const devicesInArea = deviceData.filter(d => d.inArea && d.lat && d.lon);
             
-            devicesInArea.forEach(device => {
-                const marker = createMarker(device);
-                if (marker) {
-                    markers.push(marker);
+            // Agrupa dispositivos por coordenadas (arredondadas para 6 casas decimais)
+            const coordinateGroups = {};
+            
+            devicesInArea.forEach((device, index) => {
+                // Arredonda as coordenadas para 6 casas decimais para agrupar dispositivos próximos
+                const latKey = device.lat.toFixed(6);
+                const lonKey = device.lon.toFixed(6);
+                const coordKey = `${latKey}_${lonKey}`;
+                
+                if (!coordinateGroups[coordKey]) {
+                    coordinateGroups[coordKey] = [];
+                }
+                coordinateGroups[coordKey].push({ device, index });
+            });
+            
+            console.log(`Agrupados ${devicesInArea.length} dispositivos em ${Object.keys(coordinateGroups).length} grupos`);
+            
+            // Cria marcadores com offset para grupos
+            Object.keys(coordinateGroups).forEach(coordKey => {
+                const group = coordinateGroups[coordKey];
+                
+                if (group.length === 1) {
+                    // Dispositivo único - usa coordenadas originais
+                    const { device } = group[0];
+                    const marker = createMarker(device, device.lat, device.lon);
+                    if (marker) markers.push(marker);
+                } else {
+                    // Múltiplos dispositivos no mesmo local - aplica offset
+                    console.log(`Grupo em ${coordKey} com ${group.length} dispositivos`);
+                    
+                    group.forEach(({ device, index }) => {
+                        const offset = calculateOffset(index, group.length, device.lat, device.lon);
+                        const marker = createMarker(device, offset.lat, offset.lon);
+                        if (marker) markers.push(marker);
+                    });
                 }
             });
 
-            // Ajusta visualização com MAIS ZOOM OUT para mostrar todos os 12 equipamentos
+            // Ajusta visualização
             if (markers.length > 0) {
                 const group = new L.featureGroup(markers);
                 const bounds = group.getBounds();
                 
                 if (bounds.isValid()) {
-                    // Usa um padding menor e ajusta o zoom para mostrar mais área
-                    map.fitBounds(bounds.pad(0.3), { // Aumentei o padding de 0.1 para 0.3
+                    map.fitBounds(bounds.pad(0.3), {
                         animate: true,
                         duration: 1,
                         paddingTopLeft: [50, 50],
                         paddingBottomRight: [50, 50],
-                        maxZoom: 19 // Limite máximo de zoom para não ficar muito próximo
+                        maxZoom: 18
                     });
-                    
-                    // Se ainda estiver muito zoomado, força um zoom menor
-                    setTimeout(() => {
-                        if (map.getZoom() > 17) {
-                            map.setZoom(17, { animate: true });
-                        }
-                    }, 500);
                 }
             }
+            
+            console.log(`Total de marcadores plotados: ${markers.length}`);
         }
 
         // Cria marcador
-        function createMarker(device) {
+        function createMarker(device, lat, lon) {
             const iconColor = getStatusColor(device.status);
             const iconName = getDeviceIconByName(device.name);
             
@@ -594,25 +633,30 @@
                 iconAnchor: [18, 36]
             });
 
-            const marker = L.marker([device.lat, device.lon], { 
+            const marker = L.marker([lat, lon], { 
                 icon: customIcon,
                 title: device.name
             }).addTo(map);
             
-            // Popup
+            // Popup - mostrando também as coordenadas originais
             const popupContent = `
-                <div style="padding: 10px; min-width: 200px;">
+                <div style="padding: 10px; min-width: 220px;">
                     <h4 style="margin: 0 0 10px 0; color: #2c3e50;">
                         <i class="fas fa-${iconName}" style="color: ${iconColor}; margin-right: 8px;"></i> 
                         ${device.name}
                     </h4>
-                    <p style="margin: 5px 0;"><strong>Status:</strong> 
-                        <span style="background: ${iconColor}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem;">
+                    <p style="margin: 5px 0; font-size: 0.9rem;"><strong>Status:</strong> 
+                        <span style="background: ${iconColor}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;">
                             ${device.status.toUpperCase()}
                         </span>
                     </p>
-                    <p style="margin: 5px 0;"><strong>IP:</strong> ${device.ip || 'N/A'}</p>
-                    <p style="margin: 5px 0;"><strong>Última verificação:</strong> ${formatDate(device.lastCheck)}</p>
+                    <p style="margin: 5px 0; font-size: 0.9rem;"><strong>IP:</strong> ${device.ip || 'N/A'}</p>
+                    <p style="margin: 5px 0; font-size: 0.9rem;"><strong>Coordenadas originais:</strong><br>
+                    ${device.lat.toFixed(6)}, ${device.lon.toFixed(6)}</p>
+                    ${lat !== device.lat || lon !== device.lon ? 
+                      `<p style="margin: 5px 0; font-size: 0.9rem;"><strong>Coordenadas ajustadas:</strong><br>
+                      ${lat.toFixed(6)}, ${lon.toFixed(6)}</p>` : ''}
+                    <p style="margin: 5px 0; font-size: 0.9rem;"><strong>Última verificação:</strong><br>${formatDate(device.lastCheck)}</p>
                 </div>
             `;
             
