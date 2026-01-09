@@ -150,6 +150,7 @@
             margin-bottom: 10px;
             border-left: 4px solid #4a9eff;
             transition: all 0.3s;
+            cursor: pointer;
         }
 
         .device-item:hover {
@@ -220,6 +221,31 @@
             transform: scale(1.05);
         }
 
+        .zoom-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .zoom-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+        }
+
+        .zoom-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
         .legend {
             display: flex;
             gap: 20px;
@@ -266,6 +292,67 @@
             margin: 20px 0;
         }
 
+        /* Estilos para o popup do mapa */
+        .leaflet-popup-content {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-width: 200px;
+        }
+
+        .leaflet-popup-content h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #4a9eff;
+            padding-bottom: 5px;
+        }
+
+        .leaflet-popup-content p {
+            margin: 5px 0;
+            font-size: 0.9rem;
+        }
+
+        .leaflet-popup-content .popup-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: white;
+            margin-left: 5px;
+        }
+
+        /* Customização dos controles do mapa */
+        .leaflet-control-zoom {
+            border: none !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important;
+            overflow: hidden;
+            border-radius: 10px !important;
+        }
+
+        .leaflet-control-zoom a {
+            background: rgba(255, 255, 255, 0.9) !important;
+            color: #2c3e50 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            width: 40px !important;
+            height: 40px !important;
+            line-height: 40px !important;
+            font-size: 1.2rem !important;
+        }
+
+        .leaflet-control-zoom a:hover {
+            background: white !important;
+        }
+
+        .leaflet-control-zoom a:first-child {
+            border-top-left-radius: 10px !important;
+            border-top-right-radius: 10px !important;
+        }
+
+        .leaflet-control-zoom a:last-child {
+            border-bottom-left-radius: 10px !important;
+            border-bottom-right-radius: 10px !important;
+        }
+
         /* Scrollbar personalizada */
         ::-webkit-scrollbar {
             width: 8px;
@@ -294,9 +381,22 @@
                 <h2><i class="fas fa-globe-americas"></i> Mapa do Brasil</h2>
                 <div id="map"></div>
                 <div class="controls">
-                    <button class="refresh-btn" id="refreshData">
-                        <i class="fas fa-sync-alt"></i> Atualizar Dados
-                    </button>
+                    <div>
+                        <button class="refresh-btn" id="refreshData">
+                            <i class="fas fa-sync-alt"></i> Atualizar Dados
+                        </button>
+                        <div class="zoom-controls">
+                            <button class="zoom-btn" id="zoomIn" title="Zoom In">
+                                <i class="fas fa-search-plus"></i>
+                            </button>
+                            <button class="zoom-btn" id="zoomOut" title="Zoom Out">
+                                <i class="fas fa-search-minus"></i>
+                            </button>
+                            <button class="zoom-btn" id="zoomToDevices" title="Centralizar nos dispositivos">
+                                <i class="fas fa-crosshairs"></i>
+                            </button>
+                        </div>
+                    </div>
                     <div class="legend">
                         <div class="legend-item">
                             <div class="legend-color legend-online"></div>
@@ -347,28 +447,75 @@
         let deviceData = [];
         let stateData = [];
 
+        // Função para calcular o melhor zoom e centro
+        function calculateMapView(devices) {
+            if (!devices || devices.length === 0) {
+                return {
+                    center: [-15.7801, -47.9292], // Centro do Brasil
+                    zoom: 4
+                };
+            }
+
+            // Filtra dispositivos com coordenadas válidas
+            const validDevices = devices.filter(d => d.lat && d.lon);
+            
+            if (validDevices.length === 0) {
+                return {
+                    center: [-15.7801, -47.9292],
+                    zoom: 4
+                };
+            }
+
+            // Calcula o centro dos dispositivos
+            const lats = validDevices.map(d => d.lat);
+            const lons = validDevices.map(d => d.lon);
+            
+            const center = [
+                (Math.min(...lats) + Math.max(...lats)) / 2,
+                (Math.min(...lons) + Math.max(...lons)) / 2
+            ];
+
+            // Calcula o zoom baseado na dispersão
+            const latDiff = Math.max(...lats) - Math.min(...lats);
+            const lonDiff = Math.max(...lons) - Math.min(...lons);
+            const maxDiff = Math.max(latDiff, lonDiff);
+
+            let zoom;
+            if (maxDiff > 20) zoom = 4;
+            else if (maxDiff > 10) zoom = 5;
+            else if (maxDiff > 5) zoom = 6;
+            else if (maxDiff > 2) zoom = 7;
+            else if (maxDiff > 1) zoom = 8;
+            else if (maxDiff > 0.5) zoom = 9;
+            else if (maxDiff > 0.2) zoom = 10;
+            else if (maxDiff > 0.1) zoom = 11;
+            else zoom = 12;
+
+            // Limita o zoom máximo para 18 (street level) e mínimo para 3
+            zoom = Math.min(Math.max(zoom, 3), 18);
+
+            return { center, zoom };
+        }
+
         // Inicialização do mapa
         function initMap() {
-            // Centralizado no Brasil
-            map = L.map('map').setView([-15.7801, -47.9292], 4);
+            // Começa com zoom do Brasil, será ajustado depois
+            map = L.map('map', {
+                zoomControl: false, // Desativa controle padrão para personalizar
+                maxZoom: 18, // Aumentado de 10 para 18 (street level)
+                minZoom: 3
+            }).setView([-15.7801, -47.9292], 4);
 
             // Tile layer do OpenStreetMap
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors',
-                maxZoom: 10,
+                maxZoom: 18,
                 minZoom: 3
             }).addTo(map);
 
-            // Adiciona contorno do Brasil (simplificado)
-            const brazilBounds = [
-                [5.2718, -73.9828], // Norte
-                [-33.7515, -53.3940] // Sul
-            ];
-            
-            L.rectangle(brazilBounds, {
-                color: "#4a9eff",
-                weight: 2,
-                fillOpacity: 0.05
+            // Adiciona controle de zoom personalizado
+            L.control.zoom({
+                position: 'topright'
             }).addTo(map);
 
             loadData();
@@ -444,28 +591,63 @@
                 return;
             }
 
-            deviceList.innerHTML = deviceData.map(device => `
-                <div class="device-item" data-device-id="${device.id}">
-                    <div class="device-header">
-                        <div class="device-name">
-                            <i class="fas fa-${getDeviceIcon(device.type)}"></i>
-                            ${device.name}
+            deviceList.innerHTML = deviceData.map(device => {
+                // Extrai cidade e estado da localização
+                let city = 'Não informada';
+                let state = device.state || 'SP';
+                
+                if (device.location && device.location !== 'Localização não informada') {
+                    // Tenta extrair cidade antes da vírgula
+                    const locationParts = device.location.split(',');
+                    if (locationParts.length >= 2) {
+                        city = locationParts[0].trim();
+                        // Pega o estado (último item depois da última vírgula)
+                        state = locationParts[locationParts.length - 1].trim().toUpperCase();
+                    } else {
+                        city = device.location;
+                    }
+                }
+                
+                // Salva cidade extraída para uso posterior
+                device.extractedCity = city;
+                device.extractedState = state;
+
+                return `
+                    <div class="device-item" data-device-id="${device.id}" data-lat="${device.lat}" data-lon="${device.lon}">
+                        <div class="device-header">
+                            <div class="device-name">
+                                <i class="fas fa-${getDeviceIcon(device.type)}"></i>
+                                ${device.name}
+                            </div>
+                            <div class="device-status status-${device.status}">
+                                ${device.status === 'online' ? 'ONLINE' : 
+                                  device.status === 'warning' ? 'WARNING' : 'OFFLINE'}
+                            </div>
                         </div>
-                        <div class="device-status status-${device.status}">
-                            ${device.status === 'online' ? 'ONLINE' : 
-                              device.status === 'warning' ? 'WARNING' : 'OFFLINE'}
+                        <div class="device-details">
+                            <div><strong>Tipo:</strong> ${device.type}</div>
+                            <div class="device-location">
+                                <i class="fas fa-map-marker-alt"></i>
+                                ${city}, ${state}
+                            </div>
+                            <div><strong>IP:</strong> ${device.ip || 'N/A'}</div>
+                            <div><strong>Última verificação:</strong> ${formatDate(device.lastCheck)}</div>
+                            ${device.hasExactCoords ? '<div><small><i class="fas fa-check-circle"></i> Coordenadas precisas</small></div>' : ''}
                         </div>
                     </div>
-                    <div class="device-details">
-                        <div>Tipo: ${device.type}</div>
-                        <div class="device-location">
-                            <i class="fas fa-map-marker-alt"></i>
-                            ${device.city}, ${device.state}
-                        </div>
-                        <div>Última verificação: ${formatDate(device.lastCheck)}</div>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
+
+            // Adiciona eventos de clique aos itens da lista
+            document.querySelectorAll('.device-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const lat = parseFloat(this.dataset.lat);
+                    const lon = parseFloat(this.dataset.lon);
+                    if (!isNaN(lat) && !isNaN(lon)) {
+                        map.setView([lat, lon], 15); // Zoom nível 15 (muito próximo)
+                    }
+                });
+            });
         }
 
         // Plota dispositivos no mapa
@@ -474,51 +656,94 @@
             markers.forEach(marker => map.removeLayer(marker));
             markers = [];
 
+            // Filtra dispositivos com coordenadas válidas
+            const validDevices = deviceData.filter(d => d.lat && d.lon);
+            
+            if (validDevices.length === 0) {
+                console.log('Nenhum dispositivo com coordenadas válidas');
+                return;
+            }
+
             // Adiciona marcadores para cada dispositivo
-            deviceData.forEach(device => {
-                if (device.lat && device.lon) {
-                    const iconColor = getStatusColor(device.status);
-                    
-                    const customIcon = L.divIcon({
-                        html: `<div style="
-                            background-color: ${iconColor};
-                            width: 20px;
-                            height: 20px;
-                            border-radius: 50%;
-                            border: 3px solid white;
-                            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            color: white;
-                            font-size: 10px;
-                            font-weight: bold;
-                        ">
-                            <i class="fas fa-${getDeviceIcon(device.type)}"></i>
-                        </div>`,
-                        className: 'custom-marker',
-                        iconSize: [24, 24]
-                    });
+            validDevices.forEach(device => {
+                const iconColor = getStatusColor(device.status);
+                
+                const customIcon = L.divIcon({
+                    html: `<div style="
+                        background-color: ${iconColor};
+                        width: 24px;
+                        height: 24px;
+                        border-radius: 50%;
+                        border: 3px solid white;
+                        box-shadow: 0 0 10px rgba(0,0,0,0.7);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-size: 12px;
+                        font-weight: bold;
+                        cursor: pointer;
+                        transition: transform 0.3s;
+                    ">
+                        <i class="fas fa-${getDeviceIcon(device.type)}"></i>
+                    </div>`,
+                    className: 'custom-marker',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30]
+                });
 
-                    const marker = L.marker([device.lat, device.lon], { icon: customIcon })
-                        .addTo(map)
-                        .bindPopup(`
-                            <strong>${device.name}</strong><br>
-                            Tipo: ${device.type}<br>
-                            Status: <span style="color:${iconColor};font-weight:bold">${device.status}</span><br>
-                            Local: ${device.city}, ${device.state}<br>
-                            Última verificação: ${formatDate(device.lastCheck)}
-                        `);
+                // Extrai cidade para o popup
+                let city = device.extractedCity || 'Não informada';
+                let state = device.extractedState || device.state || 'SP';
+                
+                const marker = L.marker([device.lat, device.lon], { 
+                    icon: customIcon,
+                    title: device.name
+                })
+                .addTo(map)
+                .bindPopup(`
+                    <div style="min-width: 250px;">
+                        <h3 style="margin: 0 0 10px 0; color: #2c3e50; border-bottom: 2px solid ${iconColor}; padding-bottom: 5px;">
+                            <i class="fas fa-${getDeviceIcon(device.type)}"></i> ${device.name}
+                        </h3>
+                        <p><strong>Tipo:</strong> ${device.type}</p>
+                        <p><strong>Status:</strong> <span class="popup-status" style="background: ${iconColor};">${device.status.toUpperCase()}</span></p>
+                        <p><strong>Local:</strong> ${city}, ${state}</p>
+                        <p><strong>IP:</strong> ${device.ip || 'N/A'}</p>
+                        <p><strong>Coordenadas:</strong> ${device.lat.toFixed(6)}, ${device.lon.toFixed(6)}</p>
+                        <p><strong>Última verificação:</strong> ${formatDate(device.lastCheck)}</p>
+                        ${device.hasExactCoords ? '<p><small><i class="fas fa-check-circle" style="color: #2ecc71;"></i> Coordenadas precisas do inventário</small></p>' : ''}
+                        <hr style="margin: 10px 0;">
+                        <p style="font-size: 0.8rem; color: #666;">
+                            <i class="fas fa-mouse-pointer"></i> Clique no mapa para fechar<br>
+                            <i class="fas fa-search-plus"></i> Use a roda do mouse para zoom
+                        </p>
+                    </div>
+                `);
 
-                    markers.push(marker);
-                }
+                // Efeito de hover no marcador
+                marker.on('mouseover', function() {
+                    this.openPopup();
+                });
+
+                markers.push(marker);
             });
 
-            // Ajusta o zoom para mostrar todos os marcadores
-            if (markers.length > 0) {
-                const group = new L.featureGroup(markers);
-                map.fitBounds(group.getBounds().pad(0.1));
+            // Ajusta a visualização do mapa para mostrar todos os dispositivos
+            adjustMapView();
+        }
+
+        // Ajusta a visualização do mapa
+        function adjustMapView() {
+            const validDevices = deviceData.filter(d => d.lat && d.lon);
+            
+            if (validDevices.length === 0) {
+                map.setView([-15.7801, -47.9292], 4);
+                return;
             }
+
+            const view = calculateMapView(validDevices);
+            map.setView(view.center, view.zoom);
         }
 
         // Funções auxiliares
@@ -543,12 +768,46 @@
         }
 
         function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleString('pt-BR');
+            if (!dateString || dateString === 'Invalid Date') return 'N/A';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleString('pt-BR');
+            } catch (e) {
+                return 'N/A';
+            }
         }
 
         // Event Listeners
         document.getElementById('refreshData').addEventListener('click', loadData);
+        
+        document.getElementById('zoomIn').addEventListener('click', () => {
+            map.zoomIn();
+        });
+        
+        document.getElementById('zoomOut').addEventListener('click', () => {
+            map.zoomOut();
+        });
+        
+        document.getElementById('zoomToDevices').addEventListener('click', () => {
+            adjustMapView();
+        });
+
+        // Atalhos de teclado
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '+' || e.key === '=') {
+                map.zoomIn();
+                e.preventDefault();
+            } else if (e.key === '-' || e.key === '_') {
+                map.zoomOut();
+                e.preventDefault();
+            } else if (e.key === '0') {
+                adjustMapView();
+                e.preventDefault();
+            } else if (e.key === 'r' || e.key === 'R') {
+                loadData();
+                e.preventDefault();
+            }
+        });
 
         // Inicializa quando a página carrega
         document.addEventListener('DOMContentLoaded', initMap);
