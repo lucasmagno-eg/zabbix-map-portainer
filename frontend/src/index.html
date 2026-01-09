@@ -425,10 +425,7 @@
             zoom: 18
         };
         
-        // URL da API do Zabbix configurada no Portainer
-        // Ajuste conforme sua configuração
-        const ZABBIX_API_URL = '/api/zabbix';
-        
+        const API_BASE_URL = '/api';
         let map;
         let markers = [];
         let deviceData = [];
@@ -466,39 +463,21 @@
             loadData();
         }
 
-        // Carrega dados do Zabbix
+        // Carrega dados
         async function loadData() {
             try {
                 document.getElementById('deviceList').innerHTML = 
                     '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando dispositivos...</div>';
                 
-                // Busca os hosts do Zabbix
-                console.log('Buscando dados do Zabbix...');
-                const devicesResponse = await fetch(`${ZABBIX_API_URL}/hosts`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    }
-                });
+                // Simulação de dados - substitua pelo seu endpoint real
+                const devicesResponse = await fetch(`${API_BASE_URL}/devices`);
                 
-                if (!devicesResponse.ok) {
-                    const errorText = await devicesResponse.text();
-                    console.error('Resposta da API:', errorText);
-                    throw new Error(`Erro ${devicesResponse.status}: ${devicesResponse.statusText}`);
-                }
-                
+                if (!devicesResponse.ok) throw new Error('Erro ao carregar dados');
                 deviceData = await devicesResponse.json();
                 
-                console.log('Dados recebidos do Zabbix:', deviceData);
-                
-                // Se não houver dados, usa dados de exemplo
+                // Se não houver dados, usa dados de exemplo baseados na imagem
                 if (!deviceData || deviceData.length === 0) {
-                    console.warn('Nenhum dado recebido do Zabbix, usando dados de exemplo');
                     deviceData = getSampleDevices();
-                } else {
-                    // Processa os dados do Zabbix para o formato esperado
-                    deviceData = processZabbixData(deviceData);
                 }
                 
                 filterDevicesInArea();
@@ -507,87 +486,17 @@
                 plotDevicesOnMap();
                 
             } catch (error) {
-                console.error('Erro ao carregar dados do Zabbix:', error);
+                console.error('Erro:', error);
                 // Usa dados de exemplo em caso de erro
                 deviceData = getSampleDevices();
                 filterDevicesInArea();
                 updateDeviceCount();
                 renderDeviceList();
                 plotDevicesOnMap();
-                
-                // Mostra mensagem de erro
-                document.getElementById('deviceList').innerHTML = 
-                    `<div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <p>Erro ao conectar com Zabbix</p>
-                        <p>Usando dados de demonstração</p>
-                    </div>`;
             }
         }
 
-        // Processa os dados do Zabbix para o formato esperado
-        function processZabbixData(zabbixData) {
-            // Verifica se é um array
-            if (!Array.isArray(zabbixData)) {
-                console.error('Dados do Zabbix não são um array:', zabbixData);
-                return getSampleDevices();
-            }
-            
-            return zabbixData.map((host, index) => {
-                // Extrai IP das interfaces
-                let ip = 'N/A';
-                if (host.interfaces && host.interfaces.length > 0) {
-                    ip = host.interfaces[0].ip || host.interfaces[0].dns || 'N/A';
-                }
-                
-                // Determina status baseado no Zabbix
-                let status = 'offline';
-                if (host.available === '1' || host.available === 1) {
-                    status = 'online';
-                } else if (host.available === '2' || host.available === 2) {
-                    status = 'warning';
-                }
-                
-                // Calcula coordenadas baseado no índice (para distribuição)
-                const angle = (2 * Math.PI * index) / zabbixData.length;
-                const radius = 0.0002;
-                
-                return {
-                    id: host.hostid || host.id || index + 1,
-                    name: host.host || host.name || `Dispositivo ${index + 1}`,
-                    type: determineDeviceType(host.name || host.host || ''),
-                    ip: ip,
-                    status: status,
-                    lat: MONITORING_AREA.center[0] + (radius * Math.cos(angle)),
-                    lon: MONITORING_AREA.center[1] + (radius * Math.sin(angle)),
-                    lastCheck: new Date().toISOString(),
-                    description: host.description || ''
-                };
-            });
-        }
-
-        // Determina tipo do dispositivo baseado no nome
-        function determineDeviceType(name) {
-            if (!name) return 'router';
-            
-            const nameLower = name.toLowerCase();
-            
-            if (nameLower.includes('switch') || nameLower.includes('sw')) {
-                return 'switch';
-            } else if (nameLower.includes('server') || nameLower.includes('srv')) {
-                return 'server';
-            } else if (nameLower.includes('firewall') || nameLower.includes('fw')) {
-                return 'firewall';
-            } else if (nameLower.includes('access point') || nameLower.includes('ap') || nameLower.includes('wifi')) {
-                return 'wifi';
-            } else if (nameLower.includes('router') || nameLower.includes('rt')) {
-                return 'router';
-            } else {
-                return 'router';
-            }
-        }
-
-        // Dados de exemplo baseados na sua lista
+        // Dados de exemplo baseados na imagem
         function getSampleDevices() {
             return [
                 {
@@ -677,50 +586,6 @@
                     lon: -38.510880,
                     lastCheck: new Date().toISOString(),
                     description: "Switch core do datacenter"
-                },
-                {
-                    id: 9,
-                    name: "FIREWALL - PERIMETRO",
-                    type: "firewall",
-                    ip: "10.1.1.1",
-                    status: "online",
-                    lat: -3.791540,
-                    lon: -38.510885,
-                    lastCheck: new Date().toISOString(),
-                    description: "Firewall de perímetro"
-                },
-                {
-                    id: 10,
-                    name: "SERVIDOR AD - DOMINIO",
-                    type: "server",
-                    ip: "10.1.20.10",
-                    status: "online",
-                    lat: -3.791545,
-                    lon: -38.510890,
-                    lastCheck: new Date().toISOString(),
-                    description: "Servidor de domínio Active Directory"
-                },
-                {
-                    id: 11,
-                    name: "ACCESS POINT - GALPÃO",
-                    type: "wifi",
-                    ip: "10.1.30.50",
-                    status: "warning",
-                    lat: -3.791550,
-                    lon: -38.510895,
-                    lastCheck: new Date().toISOString(),
-                    description: "Access point do galpão principal"
-                },
-                {
-                    id: 12,
-                    name: "SWITCH DISTRIBUICAO",
-                    type: "switch",
-                    ip: "10.1.25.100",
-                    status: "online",
-                    lat: -3.791555,
-                    lon: -38.510900,
-                    lastCheck: new Date().toISOString(),
-                    description: "Switch de distribuição"
                 }
             ];
         }
