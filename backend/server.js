@@ -1,62 +1,31 @@
 const express = require('express');
 const cors = require('cors');
-const axios = require('axios');
-const https = require('https');
 const app = express();
 const PORT = 3000;
 
-const ZABBIX_API_URL = process.env.ZABBIX_API_URL;
-const ZABBIX_AUTH_TOKEN = process.env.ZABBIX_AUTH_TOKEN;
-
-console.log('ZABBIX CONFIG:');
-console.log('URL:', ZABBIX_API_URL);
-console.log('TOKEN:', ZABBIX_AUTH_TOKEN ? 'YES' : 'NO');
-
-const httpsAgent = new https.Agent({ rejectUnauthorized: false });
-
+// Middleware
 app.use(cors());
 app.use(express.json());
 
+// Health check
 app.get('/health', (req, res) => {
-  res.json({
+  res.json({ 
     status: 'OK',
-    has_zabbix: !!(ZABBIX_API_URL && ZABBIX_AUTH_TOKEN),
+    service: 'zabbix-map-backend',
     time: new Date().toISOString()
   });
 });
 
-app.get('/api/token-test', async (req, res) => {
-  if (!ZABBIX_API_URL || !ZABBIX_AUTH_TOKEN) {
-    return res.json({
-      ok: false,
-      error: 'Missing config',
-      url: ZABBIX_API_URL || 'no',
-      token: ZABBIX_AUTH_TOKEN ? 'yes' : 'no'
-    });
-  }
-  
-  try {
-    const response = await axios.post(ZABBIX_API_URL, {
-      jsonrpc: '2.0',
-      method: 'user.checkAuthentication',
-      params: { token: ZABBIX_AUTH_TOKEN },
-      id: 1
-    }, { httpsAgent, timeout: 10000 });
-    
-    res.json({
-      ok: true,
-      valid: response.data.result,
-      message: response.data.result ? 'TOKEN OK' : 'TOKEN BAD'
-    });
-    
-  } catch (error) {
-    res.json({
-      ok: false,
-      error: error.message
-    });
-  }
+// Token test
+app.get('/api/token-test', (req, res) => {
+  res.json({
+    zabbix_url: process.env.ZABBIX_API_URL || 'not set',
+    has_token: !!process.env.ZABBIX_AUTH_TOKEN,
+    server_ip: process.env.SERVER_IP || 'not set'
+  });
 });
 
+// States
 app.get('/api/states', (req, res) => {
   res.json([
     { id: 'SP', name: 'Sao Paulo', lat: -23.5505, lon: -46.6333 },
@@ -64,49 +33,20 @@ app.get('/api/states', (req, res) => {
   ]);
 });
 
-app.get('/api/devices', async (req, res) => {
-  if (!ZABBIX_API_URL || !ZABBIX_AUTH_TOKEN) {
-    return res.json([
-      { id: '1', name: 'Test Device', type: 'server', status: 'online', state: 'SP', lat: -23.55, lon: -46.63 }
-    ]);
-  }
-  
-  try {
-    const response = await axios.post(ZABBIX_API_URL, {
-      jsonrpc: '2.0',
-      method: 'host.get',
-      params: {
-        output: ['hostid', 'host'],
-        filter: { status: '0' },
-        limit: 5
-      },
-      auth: ZABBIX_AUTH_TOKEN,
-      id: 2
-    }, { httpsAgent, timeout: 10000 });
-    
-    const hosts = response.data.result || [];
-    const devices = hosts.map((host, i) => ({
-      id: host.hostid,
-      name: host.host,
-      type: 'server',
-      status: 'online',
-      state: 'SP',
-      lat: -23.55,
-      lon: -46.63
-    }));
-    
-    res.json(devices);
-    
-  } catch (error) {
-    res.json([
-      { id: 'error', name: 'Error', type: 'server', status: 'offline' }
-    ]);
-  }
+// Devices
+app.get('/api/devices', (req, res) => {
+  res.json([
+    { id: '1', name: 'Test Device 1', type: 'server', status: 'online', state: 'SP', lat: -23.5505, lon: -46.6333 },
+    { id: '2', name: 'Test Device 2', type: 'router', status: 'warning', state: 'RJ', lat: -22.9068, lon: -43.1729 }
+  ]);
 });
 
+// Start server
 app.listen(PORT, '0.0.0.0', () => {
-  console.log('Server running on port', PORT);
+  console.log('================================');
+  console.log('Zabbix Map Backend');
+  console.log('Port:', PORT);
+  console.log('Zabbix URL:', process.env.ZABBIX_API_URL || 'Not set');
+  console.log('Zabbix Token:', process.env.ZABBIX_AUTH_TOKEN ? 'Set' : 'Not set');
+  console.log('================================');
 });
-EOF
-echo 'File created'
-"
