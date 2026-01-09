@@ -425,10 +425,7 @@
             zoom: 18
         };
         
-        // URL da API do Zabbix configurada no Portainer
-        // Ajuste conforme sua configuração
-        const ZABBIX_API_URL = '/api/zabbix';
-        
+        const API_BASE_URL = '/api';
         let map;
         let markers = [];
         let deviceData = [];
@@ -466,102 +463,131 @@
             loadData();
         }
 
-        // Carrega dados do Zabbix
+        // Carrega dados
         async function loadData() {
             try {
                 document.getElementById('deviceList').innerHTML = 
                     '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando dispositivos...</div>';
                 
-                // Busca os hosts do Zabbix
-                const devicesResponse = await fetch(`${ZABBIX_API_URL}/hosts`);
+                // Simulação de dados - substitua pelo seu endpoint real
+                const devicesResponse = await fetch(`${API_BASE_URL}/devices`);
                 
-                if (!devicesResponse.ok) {
-                    throw new Error(`Erro ${devicesResponse.status}: ${devicesResponse.statusText}`);
-                }
-                
+                if (!devicesResponse.ok) throw new Error('Erro ao carregar dados');
                 deviceData = await devicesResponse.json();
                 
-                console.log('Dados recebidos do Zabbix:', deviceData);
-                
-                // Se não houver dados, mostra erro
+                // Se não houver dados, usa dados de exemplo baseados na imagem
                 if (!deviceData || deviceData.length === 0) {
-                    throw new Error('Nenhum dispositivo encontrado no Zabbix');
+                    deviceData = getSampleDevices();
                 }
                 
-                processZabbixData();
                 filterDevicesInArea();
                 updateDeviceCount();
                 renderDeviceList();
                 plotDevicesOnMap();
                 
             } catch (error) {
-                console.error('Erro ao carregar dados do Zabbix:', error);
-                document.getElementById('deviceList').innerHTML = 
-                    `<div class="error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <p>Erro ao carregar dados do Zabbix</p>
-                        <p>${error.message}</p>
-                        <p style="margin-top: 10px; font-size: 0.8rem;">Verifique a conexão com a API</p>
-                    </div>`;
+                console.error('Erro:', error);
+                // Usa dados de exemplo em caso de erro
+                deviceData = getSampleDevices();
+                filterDevicesInArea();
+                updateDeviceCount();
+                renderDeviceList();
+                plotDevicesOnMap();
             }
         }
 
-        // Processa os dados do Zabbix para o formato esperado
-        function processZabbixData() {
-            if (!deviceData || !Array.isArray(deviceData)) return;
-            
-            deviceData = deviceData.map((host, index) => {
-                // Extrai IP das interfaces
-                let ip = 'N/A';
-                if (host.interfaces && host.interfaces.length > 0) {
-                    ip = host.interfaces[0].ip || host.interfaces[0].dns || 'N/A';
+        // Dados de exemplo baseados na imagem
+        function getSampleDevices() {
+            return [
+                {
+                    id: 1,
+                    name: "ROTEADOR ARUBA - DRIEDERIA",
+                    type: "router",
+                    ip: "10.1.6.2",
+                    status: "online",
+                    lat: -3.791509,
+                    lon: -38.510858,
+                    lastCheck: "2025-01-09T13:57:47",
+                    description: "Roteador da Driederia"
+                },
+                {
+                    id: 2,
+                    name: "ROTEADOR ARUBA - GALPAO",
+                    type: "router",
+                    ip: "10.1.15.31",
+                    status: "online",
+                    lat: -3.791515,
+                    lon: -38.510850,
+                    lastCheck: "2025-01-09T13:57:47",
+                    description: "Roteador do Galpão"
+                },
+                {
+                    id: 3,
+                    name: "ROTEADOR ARUBA - MANUTENCAO",
+                    type: "router",
+                    ip: "10.1.17.14",
+                    status: "online",
+                    lat: -3.791520,
+                    lon: -38.510865,
+                    lastCheck: "2025-01-09T13:57:47",
+                    description: "Roteador da Manutenção"
+                },
+                {
+                    id: 4,
+                    name: "ROTEADOR ARUBA - PORTARIA",
+                    type: "router",
+                    ip: "10.1.15.04",
+                    status: "online",
+                    lat: -3.791525,
+                    lon: -38.510870,
+                    lastCheck: "2025-01-09T13:57:47",
+                    description: "Roteador da Portaria"
+                },
+                {
+                    id: 5,
+                    name: "ROTEADOR ARUBA - APOIO OPERACIONAL",
+                    type: "router",
+                    ip: "10.1.16.107",
+                    status: "online",
+                    lat: -3.791530,
+                    lon: -38.510875,
+                    lastCheck: "2025-01-09T13:57:47",
+                    description: "Roteador do Apoio Operacional"
+                },
+                {
+                    id: 6,
+                    name: "ROTEADOR ARUBA - ADM",
+                    type: "router",
+                    ip: "10.1.18.60",
+                    status: "warning",
+                    lat: -3.791500,
+                    lon: -38.510845,
+                    lastCheck: new Date().toISOString(),
+                    description: "Roteador da Administração"
+                },
+                {
+                    id: 7,
+                    name: "ROTEADOR ARUBA - TIC",
+                    type: "router",
+                    ip: "10.1.16.5",
+                    status: "offline",
+                    lat: -3.791505,
+                    lon: -38.510840,
+                    lastCheck: new Date().toISOString(),
+                    description: "Roteador do TIC"
+                },
+                {
+                    id: 8,
+                    name: "SWITCH CORE - DATACENTER",
+                    type: "switch",
+                    ip: "10.1.10.1",
+                    status: "online",
+                    lat: -3.791535,
+                    lon: -38.510880,
+                    lastCheck: new Date().toISOString(),
+                    description: "Switch core do datacenter"
                 }
-                
-                // Determina status baseado no Zabbix
-                let status = 'offline';
-                if (host.available === '1') {
-                    status = 'online';
-                } else if (host.available === '2') {
-                    status = 'warning';
-                }
-                
-                // Calcula coordenadas baseado no índice (para distribuição)
-                const angle = (2 * Math.PI * index) / deviceData.length;
-                const radius = 0.0002; // Raio para distribuição
-                
-                return {
-                    id: host.hostid || index + 1,
-                    name: host.host || host.name || `Dispositivo ${index + 1}`,
-                    type: determineDeviceType(host.name || host.host),
-                    ip: ip,
-                    status: status,
-                    lat: MONITORING_AREA.center[0] + (radius * Math.cos(angle)),
-                    lon: MONITORING_AREA.center[1] + (radius * Math.sin(angle)),
-                    lastCheck: new Date().toISOString(), // Zabbix geralmente não envia timestamp direto
-                    description: host.description || ''
-                };
-            });
-        }
-
-        // Determina tipo do dispositivo baseado no nome
-        function determineDeviceType(name) {
-            if (!name) return 'router';
-            
-            const nameLower = name.toLowerCase();
-            
-            if (nameLower.includes('switch') || nameLower.includes('sw')) {
-                return 'switch';
-            } else if (nameLower.includes('server') || nameLower.includes('srv')) {
-                return 'server';
-            } else if (nameLower.includes('firewall') || nameLower.includes('fw')) {
-                return 'firewall';
-            } else if (nameLower.includes('access point') || nameLower.includes('ap') || nameLower.includes('wifi')) {
-                return 'wifi';
-            } else if (nameLower.includes('router') || nameLower.includes('rt')) {
-                return 'router';
-            } else {
-                return 'router';
-            }
+            ];
         }
         
         // Filtra dispositivos
@@ -599,9 +625,9 @@
                 return;
             }
 
-            deviceList.innerHTML = devicesInArea.map((device, index) => {
+            deviceList.innerHTML = devicesInArea.map(device => {
                 return `
-                    <div class="device-item" data-device-index="${index}">
+                    <div class="device-item" data-device-id="${device.id}">
                         <div class="device-header">
                             <div class="device-name">
                                 <i class="fas fa-wifi"></i> ${device.name}
@@ -622,8 +648,8 @@
             // Adiciona eventos aos itens
             document.querySelectorAll('.device-item').forEach(item => {
                 item.addEventListener('click', function() {
-                    const deviceIndex = this.getAttribute('data-device-index');
-                    const device = devicesInArea[deviceIndex];
+                    const deviceId = this.getAttribute('data-device-id');
+                    const device = deviceData.find(d => d.id == deviceId);
                     if (device) {
                         // Centraliza no mapa
                         map.setView([device.lat, device.lon], 18);
@@ -646,40 +672,9 @@
 
             const devicesInArea = deviceData.filter(d => d.inArea && d.lat && d.lon);
             
-            // Agrupa dispositivos por coordenadas (arredondadas para 6 casas decimais)
-            const coordinateGroups = {};
-            
-            devicesInArea.forEach((device, index) => {
-                // Arredonda as coordenadas para 6 casas decimais para agrupar dispositivos próximos
-                const latKey = device.lat.toFixed(6);
-                const lonKey = device.lon.toFixed(6);
-                const coordKey = `${latKey}_${lonKey}`;
-                
-                if (!coordinateGroups[coordKey]) {
-                    coordinateGroups[coordKey] = [];
-                }
-                coordinateGroups[coordKey].push({ device, index });
-            });
-            
-            // Cria marcadores com offset para grupos
-            Object.keys(coordinateGroups).forEach(coordKey => {
-                const group = coordinateGroups[coordKey];
-                
-                if (group.length === 1) {
-                    const { device } = group[0];
-                    const marker = createMarker(device, device.lat, device.lon);
-                    if (marker) markers.push(marker);
-                } else {
-                    // Múltiplos dispositivos no mesmo local - aplica offset
-                    const radius = 0.000015;
-                    group.forEach(({ device, index }) => {
-                        const angle = (2 * Math.PI * index) / group.length;
-                        const offsetLat = device.lat + (radius * Math.cos(angle));
-                        const offsetLon = device.lon + (radius * Math.sin(angle));
-                        const marker = createMarker(device, offsetLat, offsetLon);
-                        if (marker) markers.push(marker);
-                    });
-                }
+            devicesInArea.forEach((device) => {
+                const marker = createMarker(device, device.lat, device.lon);
+                if (marker) markers.push(marker);
             });
 
             // Ajusta visualização se houver marcadores
@@ -688,11 +683,9 @@
                 const bounds = group.getBounds();
                 
                 if (bounds.isValid()) {
-                    map.fitBounds(bounds.pad(0.3), {
+                    map.fitBounds(bounds.pad(0.2), {
                         animate: true,
                         duration: 1,
-                        paddingTopLeft: [50, 50],
-                        paddingBottomRight: [50, 50],
                         maxZoom: 18
                     });
                 }
