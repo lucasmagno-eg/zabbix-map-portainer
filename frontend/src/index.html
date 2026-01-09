@@ -487,18 +487,30 @@
                Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
     }
 
+    // Função para criar um deslocamento pequeno (spiderfy) para dispositivos com mesmas coordenadas
+    function calculateOffset(index, total, baseLat, baseLon) {
+        if (total <= 1) return { lat: baseLat, lon: baseLon };
+        
+        // Se há múltiplos dispositivos no mesmo local, distribui em círculo
+        const radius = 0.00002; // Aproximadamente 2 metros em graus
+        const angle = (2 * Math.PI * index) / total;
+        
+        return {
+            lat: baseLat + (radius * Math.cos(angle)),
+            lon: baseLon + (radius * Math.sin(angle))
+        };
+    }
+
     // Inicialização do mapa
     function initMap() {
         // Inicia o mapa
         map = L.map('map', {
             zoomControl: true,
-            maxZoom: 20, // Aumentado para evitar problemas
+            maxZoom: 20,
             minZoom: 15,
             zoomSnap: 0.1,
             zoomDelta: 0.5,
-            inertia: false, // Desativa inércia para mais controle
-            inertiaDeceleration: 0, // Sem desaceleração
-            inertiaMaxSpeed: 0 // Sem velocidade máxima
+            inertia: false
         }).setView(MONITORING_AREA.center, MONITORING_AREA.zoom);
 
         // Tile layer
@@ -506,7 +518,7 @@
             attribution: '© OpenStreetMap contributors',
             maxZoom: 20,
             minZoom: 15,
-            noWrap: true // Evita repetição de tiles
+            noWrap: true
         }).addTo(map);
 
         // Cria área de monitoramento
@@ -530,6 +542,8 @@
 
             deviceData = await devicesResponse.json();
             
+            console.log(`Total de dispositivos recebidos: ${deviceData.length}`);
+            
             // Filtra dispositivos dentro da área de 1km
             filterDevicesInArea();
             updateStats();
@@ -550,8 +564,13 @@
     function filterDevicesInArea() {
         if (!deviceData || deviceData.length === 0) return;
         
+        let validCount = 0;
+        let invalidCount = 0;
+        
         deviceData.forEach(device => {
             if (isValidCoordinate(device.lat, device.lon)) {
+                validCount++;
+                
                 // Verifica se está dentro da área de 1km
                 const latDiff = Math.abs(device.lat - MONITORING_AREA.center[0]);
                 const lonDiff = Math.abs(device.lon - MONITORING_AREA.center[1]);
@@ -565,10 +584,13 @@
                     device.distanceFromCenter = Math.sqrt(latKm*latKm + lonKm*lonKm).toFixed(2);
                 }
             } else {
+                invalidCount++;
                 device.inArea = false;
                 console.warn(`Coordenadas inválidas para dispositivo: ${device.name}`, device.lat, device.lon);
             }
         });
+        
+        console.log(`Dispositivos válidos: ${validCount}, inválidos: ${invalidCount}`);
         
         // Ordena por proximidade
         deviceData.sort((a, b) => {
@@ -586,6 +608,8 @@
         const onlineDevices = devicesInArea.filter(d => d.status === 'online').length;
         const warningDevices = devicesInArea.filter(d => d.status === 'warning').length;
         const offlineDevices = devicesInArea.filter(d => d.status === 'offline').length;
+
+        console.log(`Estatísticas: ${totalDevices} dispositivos na área (${onlineDevices} online, ${warningDevices} warning, ${offlineDevices} offline)`);
 
         document.getElementById('statsContainer').innerHTML = `
             <div class="stat-card">
@@ -613,6 +637,8 @@
         
         const devicesInArea = deviceData.filter(d => d.inArea);
         
+        console.log(`Renderizando lista com ${devicesInArea.length} dispositivos`);
+
         if (devicesInArea.length === 0) {
             deviceList.innerHTML = '<div class="error">Nenhum dispositivo na área de monitoramento</div>';
             return;
@@ -652,6 +678,7 @@
                             ${locationText}
                         </div>
                         ${device.distanceFromCenter ? `<div><strong>Distância:</strong> ${device.distanceFromCenter}km</div>` : ''}
+                        <div><strong>Coordenadas:</strong> ${device.lat?.toFixed(6) || 'N/A'}, ${device.lon?.toFixed(6) || 'N/A'}</div>
                         <div><strong>Última verificação:</strong> ${formatDate(device.lastCheck)}</div>
                     </div>
                 </div>
@@ -659,7 +686,7 @@
         }).join('');
     }
 
-    // Plota dispositivos no mapa - VERSÃO CORRIGIDA
+    // Plota dispositivos no mapa - VERSÃO QUE MOSTRA TODOS
     function plotDevicesOnMap() {
         // Remove marcadores antigos
         markers.forEach(marker => {
@@ -673,105 +700,153 @@
         
         console.log(`Plotando ${devicesInArea.length} dispositivos válidos no mapa`);
         
-        devicesInArea.forEach(device => {
-            const iconColor = getStatusColor(device.status);
-            const iconName = getDeviceIconByName(device.name);
+        // Agrupa dispositivos por coordenadas para aplicar offset
+        const coordinateGroups = {};
+        
+        devicesInArea.forEach((device, index) => {
+            const coordKey = `${device.lat.toFixed(6)}_${device.lon.toFixed(6)}`;
             
-            // Cria ícone SIMPLES primeiro para teste
-            const customIcon = L.divIcon({
-                html: `<div style="
-                    background-color: ${iconColor};
-                    width: 24px;
-                    height: 24px;
-                    border-radius: 50%;
-                    border: 2px solid white;
-                    box-shadow: 0 0 8px rgba(0,0,0,0.5);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: white;
-                    font-size: 12px;
-                ">
-                    <i class="fas fa-${iconName}"></i>
-                </div>`,
-                className: 'custom-marker',
-                iconSize: [28, 28],
-                iconAnchor: [14, 28]
-            });
-
-            // Cria marcador com coordenadas fixas
-            const marker = L.marker([device.lat, device.lon], { 
-                icon: customIcon,
-                title: device.name,
-                draggable: false, // Impede que seja arrastado acidentalmente
-                keyboard: false // Desativa navegação por teclado
-            }).addTo(map);
-            
-            // Adiciona popup
-            marker.bindPopup(`
-                <div style="min-width: 250px;">
-                    <h3 style="margin: 0 0 10px 0; color: #2c3e50; border-bottom: 2px solid ${iconColor}; padding-bottom: 5px;">
-                        <i class="fas fa-${iconName}" style="color: ${iconColor};"></i> ${device.name}
-                    </h3>
-                    <p><strong>Tipo:</strong> ${device.type}</p>
-                    <p><strong>Status:</strong> <span style="background: ${iconColor}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem;">${device.status.toUpperCase()}</span></p>
-                    <p><strong>IP:</strong> ${device.ip || 'N/A'}</p>
-                    <p><strong>Coordenadas:</strong> ${device.lat.toFixed(6)}, ${device.lon.toFixed(6)}</p>
-                    <p><strong>Última verificação:</strong> ${formatDate(device.lastCheck)}</p>
-                </div>
-            `);
-            
-            // Eventos SIMPLES - sem efeitos que possam causar problemas
-            marker.on('mouseover', function(e) {
-                this.openPopup();
-            });
-            
-            marker.on('mouseout', function(e) {
-                // Não fecha automaticamente - só fecha se clicar em outro
-            });
-
-            markers.push(marker);
+            if (!coordinateGroups[coordKey]) {
+                coordinateGroups[coordKey] = [];
+            }
+            coordinateGroups[coordKey].push({ device, index });
         });
         
-        // Ajusta a visualização do mapa para mostrar todos os marcadores
+        // Contadores para debug
+        let singleDeviceCount = 0;
+        let groupedDeviceCount = 0;
+        
+        Object.keys(coordinateGroups).forEach(coordKey => {
+            const group = coordinateGroups[coordKey];
+            
+            if (group.length === 1) {
+                // Dispositivo único - usa coordenadas originais
+                const { device, index } = group[0];
+                createMarker(device, device.lat, device.lon, index);
+                singleDeviceCount++;
+            } else {
+                // Múltiplos dispositivos no mesmo local - aplica offset
+                console.log(`Grupo encontrado em ${coordKey} com ${group.length} dispositivos:`);
+                group.forEach(({ device, index }) => {
+                    console.log(`  - ${device.name} (${device.status})`);
+                });
+                
+                group.forEach(({ device, index }) => {
+                    const offset = calculateOffset(index, group.length, device.lat, device.lon);
+                    createMarker(device, offset.lat, offset.lon, index);
+                    groupedDeviceCount++;
+                });
+            }
+        });
+        
+        console.log(`Marcadores criados: ${singleDeviceCount} únicos + ${groupedDeviceCount} agrupados = ${markers.length} total`);
+        
+        // Ajusta a visualização do mapa
         if (markers.length > 0) {
             setTimeout(() => {
                 try {
                     const group = new L.featureGroup(markers);
                     const bounds = group.getBounds();
                     
-                    // Verifica se os bounds são válidos
                     if (bounds.isValid()) {
-                        // Ajusta o mapa para mostrar todos os marcadores com uma pequena margem
-                        map.fitBounds(bounds.pad(0.1), {
-                            animate: false, // Sem animação
-                            duration: 0, // Imediato
-                            paddingTopLeft: [50, 50], // Margem
-                            paddingBottomRight: [50, 50]
-                        });
-                    } else {
-                        console.warn('Bounds inválidos, mantendo visão atual');
-                        map.setView(MONITORING_AREA.center, MONITORING_AREA.zoom, {
-                            animate: false
+                        map.fitBounds(bounds.pad(0.15), {
+                            animate: false,
+                            duration: 0,
+                            paddingTopLeft: [100, 100],
+                            paddingBottomRight: [100, 100]
                         });
                     }
                 } catch (error) {
                     console.error('Erro ao ajustar bounds:', error);
-                    map.setView(MONITORING_AREA.center, MONITORING_AREA.zoom, { animate: false });
                 }
-            }, 100);
+            }, 200);
         }
-        
-        // Desativa alguns comportamentos que podem causar problemas
-        disableProblematicMapBehaviors();
     }
     
-    // Função para desativar comportamentos problemáticos do mapa
-    function disableProblematicMapBehaviors() {
-        // Desativa alguns comportamentos que podem causar "salto" no mapa
-        map.options.bounceAtZoomLimits = false;
-        map.options.wheelDebounceTime = 100;
-        map.options.wheelPxPerZoomLevel = 60;
+    // Função auxiliar para criar marcador
+    function createMarker(device, lat, lon, index) {
+        const iconColor = getStatusColor(device.status);
+        const iconName = getDeviceIconByName(device.name);
+        
+        // Ícone com número se estiver em grupo
+        const groupIndex = index + 1;
+        const showNumber = false; // Desativado por enquanto
+        
+        const customIcon = L.divIcon({
+            html: `<div style="
+                background-color: ${iconColor};
+                width: ${showNumber ? '32px' : '28px'};
+                height: ${showNumber ? '32px' : '28px'};
+                border-radius: 50%;
+                border: 3px solid white;
+                box-shadow: 0 0 10px rgba(0,0,0,0.6);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: ${showNumber ? '14px' : '13px'};
+                font-weight: bold;
+                cursor: pointer;
+                position: relative;
+            ">
+                <i class="fas fa-${iconName}"></i>
+                ${showNumber ? `<span style="position: absolute; top: -5px; right: -5px; background: white; color: #333; width: 16px; height: 16px; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center;">${groupIndex}</span>` : ''}
+            </div>`,
+            className: 'custom-marker',
+            iconSize: showNumber ? [36, 36] : [32, 32],
+            iconAnchor: showNumber ? [18, 36] : [16, 32]
+        });
+
+        const marker = L.marker([lat, lon], { 
+            icon: customIcon,
+            title: `${device.name} (${device.status})`,
+            draggable: false,
+            keyboard: false
+        }).addTo(map);
+        
+        // Popup informativo
+        marker.bindPopup(`
+            <div style="min-width: 280px; max-width: 300px;">
+                <h3 style="margin: 0 0 10px 0; color: #2c3e50; border-bottom: 2px solid ${iconColor}; padding-bottom: 5px;">
+                    <i class="fas fa-${iconName}" style="color: ${iconColor}; margin-right: 8px;"></i> ${device.name}
+                </h3>
+                <p><strong>Tipo:</strong> ${device.type}</p>
+                <p><strong>Status:</strong> <span style="background: ${iconColor}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">${device.status.toUpperCase()}</span></p>
+                <p><strong>IP:</strong> ${device.ip || 'N/A'}</p>
+                <p><strong>Coordenadas originais:</strong> ${device.lat.toFixed(6)}, ${device.lon.toFixed(6)}</p>
+                ${lat !== device.lat || lon !== device.lon ? `<p><strong>Coordenadas ajustadas:</strong> ${lat.toFixed(6)}, ${lon.toFixed(6)}</p>` : ''}
+                <p><strong>Distância do centro:</strong> ${device.distanceFromCenter || '0.00'}km</p>
+                <p><strong>Última verificação:</strong> ${formatDate(device.lastCheck)}</p>
+                <hr style="margin: 10px 0; border: none; border-top: 1px solid #eee;">
+                <p style="font-size: 0.8rem; color: #666;">
+                    <i class="fas fa-info-circle"></i> Clique no mapa para fechar
+                </p>
+            </div>
+        `);
+        
+        // Eventos simples
+        marker.on('mouseover', function() {
+            this.openPopup();
+            this._icon.style.transform = 'scale(1.15)';
+            this._icon.style.zIndex = '1000';
+        });
+        
+        marker.on('mouseout', function() {
+            this._icon.style.transform = 'scale(1)';
+            this._icon.style.zIndex = 'auto';
+        });
+        
+        marker.on('click', function() {
+            // Fecha outros popups
+            markers.forEach(m => {
+                if (m !== this && m.isPopupOpen()) {
+                    m.closePopup();
+                }
+            });
+        });
+
+        markers.push(marker);
+        return marker;
     }
 
     // Funções auxiliares
@@ -797,18 +872,17 @@
     // Event Listeners
     document.getElementById('refreshData').addEventListener('click', loadData);
 
-    // Previne comportamento padrão de alguns atalhos
-    document.addEventListener('keydown', function(e) {
-        if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-            e.preventDefault();
-        }
-    });
-
     // Inicialização
     document.addEventListener('DOMContentLoaded', initMap);
     
     // Atualiza a cada 60 segundos
     setInterval(loadData, 60000);
+    
+    // Debug adicional
+    console.log('=== SISTEMA INICIADO ===');
+    console.log('Localização central:', MONITORING_AREA.center);
+    console.log('Raio da área:', MONITORING_AREA.radius, 'graus (~1km)');
+    console.log('Zoom inicial:', MONITORING_AREA.zoom);
     </script>
 </body>
 </html>
