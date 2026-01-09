@@ -8,8 +8,7 @@ services:
     ports:
       - "23001:3000"
      env_file:
-      - .env  # ← MUDEI AQUI: usa arquivo .env
-    # REMOVA as variáveis environment individuais
+      - .env
     networks:
       - zabbix-network
 
