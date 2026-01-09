@@ -7,9 +7,13 @@ services:
     restart: unless-stopped
     ports:
       - "23001:3000"
+    environment:
+      - ZABBIX_API_URL=http://172.17.17.53/zabbix/api_jsonrpc.php
+      - ZABBIX_AUTH_TOKEN=0663e920534f56sd4f6sdf4dsff46sd8fs8d6faa90c069722fd
+      - SERVER_IP=172.17.17.10
+      - NODE_ENV=production
     networks:
       - zabbix-network
-    # SEM HEALTHCHECK temporariamente
 
   frontend:
     build: ./frontend
@@ -17,8 +21,6 @@ services:
     restart: unless-stopped
     ports:
       - "23000:80"
-    depends_on:
-      - backend  # Remove 'condition: service_healthy'
     networks:
       - zabbix-network
 
