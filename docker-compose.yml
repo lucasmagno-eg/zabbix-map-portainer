@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     ports:
       - "23001:3000"
-     env_file:
+    env_file:
       - .env
     networks:
       - zabbix-network
