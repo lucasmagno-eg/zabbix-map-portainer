@@ -270,9 +270,9 @@
         /* Estilos para o polígono da área */
         .area-polygon {
             stroke: #4a9eff;
-            stroke-width: 2;
-            stroke-dasharray: 5, 5;
-            fill: rgba(74, 158, 255, 0.05);
+            stroke-width: 1;
+            stroke-dasharray: 3, 3;
+            fill: rgba(74, 158, 255, 0.03);
         }
 
         /* Estilos para o popup do mapa */
@@ -410,11 +410,11 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Configurações da área de monitoramento (não expostas no frontend)
+        // Configurações da área de monitoramento
         const MONITORING_AREA = {
-            center: [-3.7915097788280088, -38.51085886125404], // Localização central
-            radius: 0.009, // Aproximadamente 1km em graus (1km ≈ 0.009 graus)
-            zoom: 16 // Zoom estático fixo
+            center: [-3.7915097788280088, -38.51085886125404],
+            radius: 0.009, // Aproximadamente 1km
+            zoom: 18 // Zoom fixo em nível 18 (máximo)
         };
         
         const API_BASE_URL = '/api';
@@ -423,7 +423,47 @@
         let deviceData = [];
         let areaPolygon;
 
-        // Cria polígono da área de monitoramento (1km)
+        // Mapeamento de ícones para cada tipo de dispositivo
+        const DEVICE_ICONS = {
+            // Galpão, Portaria, Alojamento
+            'galpão': 'warehouse',
+            'galpao': 'warehouse',
+            'portaria': 'door-closed',
+            'alojamento': 'bed',
+            
+            // Novos dispositivos com símbolos específicos
+            'tic': 'desktop',           // TIC
+            'gbtech': 'laptop-code',    // GBTECH
+            'rh': 'users',              // RH
+            'apoio': 'hands-helping',   // APOIO OPERACIONAL
+            'apoio operacional': 'hands-helping',
+            'administração': 'user-tie', // ADMINISTRAÇÃO
+            'administracao': 'user-tie',
+            'adm': 'user-tie',
+            
+            // Tipos padrão
+            'router': 'wifi',
+            'switch': 'sitemap',
+            'server': 'server',
+            'firewall': 'shield-alt',
+            'default': 'desktop'
+        };
+
+        // Função para obter ícone baseado no nome do dispositivo
+        function getDeviceIconByName(deviceName) {
+            const nameLower = deviceName.toLowerCase();
+            
+            // Verifica cada palavra-chave nos ícones
+            for (const [keyword, icon] of Object.entries(DEVICE_ICONS)) {
+                if (nameLower.includes(keyword)) {
+                    return icon;
+                }
+            }
+            
+            return DEVICE_ICONS.default;
+        }
+
+        // Cria polígono da área de monitoramento
         function createMonitoringArea() {
             const bounds = [
                 [MONITORING_AREA.center[0] - MONITORING_AREA.radius, MONITORING_AREA.center[1] - MONITORING_AREA.radius],
@@ -432,24 +472,24 @@
             
             areaPolygon = L.rectangle(bounds, {
                 color: "#4a9eff",
-                weight: 2,
+                weight: 1,
                 opacity: 0.3,
-                dashArray: "5, 5",
+                dashArray: "3, 3",
                 fillColor: "#4a9eff",
-                fillOpacity: 0.05,
+                fillOpacity: 0.03,
                 className: 'area-polygon'
             }).addTo(map);
             
             return areaPolygon;
         }
 
-        // Inicialização do mapa com zoom estático
+        // Inicialização do mapa com zoom em nível 18
         function initMap() {
-            // Inicia o mapa com zoom e posição fixos
+            // Inicia o mapa com zoom fixo em 18
             map = L.map('map', {
                 zoomControl: true,
-                maxZoom: 18,
-                minZoom: 14, // Zoom mínimo para manter foco
+                maxZoom: 19,
+                minZoom: 16, // Zoom mínimo um pouco maior
                 zoomSnap: 0.5,
                 zoomDelta: 0.5
             }).setView(MONITORING_AREA.center, MONITORING_AREA.zoom);
@@ -457,23 +497,12 @@
             // Tile layer
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors',
-                maxZoom: 18,
-                minZoom: 14
+                maxZoom: 19,
+                minZoom: 16
             }).addTo(map);
 
             // Cria área de monitoramento
             createMonitoringArea();
-            
-            // Desativa arrastar para manter posição fixa
-            map.dragging.disable();
-            map.touchZoom.disable();
-            map.doubleClickZoom.disable();
-            map.scrollWheelZoom.disable();
-            map.boxZoom.disable();
-            map.keyboard.disable();
-            
-            // Permite apenas zoom com os botões de controle
-            if (map.tap) map.tap.disable();
 
             // Carrega dados
             loadData();
@@ -593,12 +622,13 @@
                 }
                 
                 const locationText = state ? `${city}, ${state}` : city;
+                const iconName = getDeviceIconByName(device.name);
                 
                 return `
                     <div class="device-item" data-device-id="${device.id}">
                         <div class="device-header">
                             <div class="device-name">
-                                <i class="fas fa-${getDeviceIcon(device.type)}"></i>
+                                <i class="fas fa-${iconName}"></i>
                                 ${device.name}
                             </div>
                             <div class="device-status status-${device.status}">
@@ -629,39 +659,31 @@
             
             devicesInArea.forEach(device => {
                 const iconColor = getStatusColor(device.status);
-                
-                // Ícone baseado no nome do dispositivo
-                let iconHtml = '';
-                if (device.name.toLowerCase().includes('galpão') || device.name.toLowerCase().includes('galpao')) {
-                    iconHtml = '<i class="fas fa-warehouse"></i>';
-                } else if (device.name.toLowerCase().includes('portaria')) {
-                    iconHtml = '<i class="fas fa-door-closed"></i>';
-                } else if (device.name.toLowerCase().includes('alojamento')) {
-                    iconHtml = '<i class="fas fa-bed"></i>';
-                } else {
-                    iconHtml = `<i class="fas fa-${getDeviceIcon(device.type)}"></i>`;
-                }
+                const iconName = getDeviceIconByName(device.name);
                 
                 const customIcon = L.divIcon({
                     html: `<div style="
                         background-color: ${iconColor};
-                        width: 26px;
-                        height: 26px;
+                        width: 32px;
+                        height: 32px;
                         border-radius: 50%;
                         border: 3px solid white;
-                        box-shadow: 0 0 10px rgba(0,0,0,0.6);
+                        box-shadow: 0 0 12px rgba(0,0,0,0.7);
                         display: flex;
                         align-items: center;
                         justify-content: center;
                         color: white;
-                        font-size: 13px;
+                        font-size: 16px;
                         font-weight: bold;
+                        cursor: pointer;
+                        transition: transform 0.2s;
                     ">
-                        ${iconHtml}
+                        <i class="fas fa-${iconName}"></i>
                     </div>`,
                     className: 'custom-marker',
-                    iconSize: [32, 32],
-                    iconAnchor: [16, 32]
+                    iconSize: [38, 38],
+                    iconAnchor: [19, 38],
+                    popupAnchor: [0, -38]
                 });
 
                 const marker = L.marker([device.lat, device.lon], { 
@@ -670,33 +692,53 @@
                 })
                 .addTo(map)
                 .bindPopup(`
-                    <div style="min-width: 250px;">
+                    <div style="min-width: 280px;">
                         <h3 style="margin: 0 0 10px 0; color: #2c3e50; border-bottom: 2px solid ${iconColor}; padding-bottom: 5px;">
-                            ${iconHtml} ${device.name}
+                            <i class="fas fa-${iconName}" style="color: ${iconColor};"></i> ${device.name}
                         </h3>
                         <p><strong>Tipo:</strong> ${device.type}</p>
                         <p><strong>Status:</strong> <span class="popup-status" style="background: ${iconColor};">${device.status.toUpperCase()}</span></p>
                         <p><strong>IP:</strong> ${device.ip || 'N/A'}</p>
                         <p><strong>Última verificação:</strong> ${formatDate(device.lastCheck)}</p>
                         ${device.distanceFromCenter ? `<p><strong>Distância:</strong> ${device.distanceFromCenter}km</p>` : ''}
+                        <hr style="margin: 10px 0; border-color: #eee;">
+                        <p style="font-size: 0.8rem; color: #666; font-style: italic;">
+                            <i class="fas fa-mouse-pointer"></i> Clique fora para fechar<br>
+                            <i class="fas fa-search-plus"></i> Use a roda do mouse para zoom
+                        </p>
                     </div>
                 `);
 
+                // Efeito hover no marcador
+                marker.on('mouseover', function() {
+                    this.openPopup();
+                    this._icon.style.transform = 'scale(1.2)';
+                });
+
+                marker.on('mouseout', function() {
+                    this._icon.style.transform = 'scale(1)';
+                });
+
+                marker.on('click', function() {
+                    // Fecha outros popups quando clica em um marcador
+                    markers.forEach(m => {
+                        if (m !== this && m.isPopupOpen()) {
+                            m.closePopup();
+                        }
+                    });
+                });
+
                 markers.push(marker);
             });
+            
+            // Se houver muitos marcadores próximos, ajusta a visualização
+            if (markers.length > 0) {
+                const group = new L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.05));
+            }
         }
 
         // Funções auxiliares
-        function getDeviceIcon(type) {
-            const icons = {
-                'router': 'wifi',
-                'switch': 'sitemap',
-                'server': 'server',
-                'firewall': 'shield-alt'
-            };
-            return icons[type] || 'desktop';
-        }
-
         function getStatusColor(status) {
             const colors = {
                 'online': '#2ecc71',
