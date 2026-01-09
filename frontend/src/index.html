@@ -293,16 +293,6 @@
             font-size: 0.9rem;
         }
 
-        .leaflet-popup-content .popup-status {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            color: white;
-            margin-left: 5px;
-        }
-
         /* Customização dos controles do mapa */
         .leaflet-control-zoom {
             border: none !important;
@@ -340,6 +330,12 @@
         .custom-marker {
             background: transparent !important;
             border: none !important;
+        }
+
+        /* Estilo para o conteúdo do popup */
+        .custom-popup .leaflet-popup-content-wrapper {
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
 
         /* Scrollbar personalizada */
@@ -438,7 +434,7 @@
         let markers = new Map(); // Usando Map para gerenciar melhor os marcadores
         let deviceData = [];
         let areaPolygon;
-        let markerLayerGroup = L.layerGroup(); // Grupo para gerenciar todos os marcadores
+        let markerLayerGroup;
 
         // Mapeamento de ícones para cada tipo de dispositivo
         const DEVICE_ICONS = {
@@ -538,11 +534,11 @@
                 noWrap: true
             }).addTo(map);
 
-            // Adiciona o grupo de marcadores ao mapa
-            markerLayerGroup.addTo(map);
-
             // Cria área de monitoramento
             createMonitoringArea();
+
+            // Cria o grupo de marcadores
+            markerLayerGroup = L.layerGroup().addTo(map);
 
             // Carrega dados
             loadData();
@@ -706,7 +702,7 @@
             }).join('');
         }
 
-        // Plota dispositivos no mapa - VERSÃO CORRIGIDA
+        // Plota dispositivos no mapa - VERSÃO COMPLETAMENTE CORRIGIDA
         function plotDevicesOnMap() {
             console.log('Plotando dispositivos no mapa...');
             
@@ -770,8 +766,8 @@
                         const bounds = markerLayerGroup.getBounds();
                         if (bounds.isValid()) {
                             map.fitBounds(bounds.pad(0.15), {
-                                animate: false,
-                                duration: 0,
+                                animate: true,
+                                duration: 0.5,
                                 paddingTopLeft: [100, 100],
                                 paddingBottomRight: [100, 100]
                             });
@@ -787,24 +783,24 @@
         function clearMarkers() {
             console.log('Limpando marcadores antigos...');
             
-            // Limpa o grupo de marcadores
+            // Remove todos os marcadores do grupo
             markerLayerGroup.clearLayers();
             
             // Limpa o Map de marcadores
             markers.clear();
         }
         
-        // Função auxiliar para criar marcador - VERSÃO CORRIGIDA
+        // Função auxiliar para criar marcador - VERSÃO ESTÁVEL
         function createMarker(device, lat, lon, index) {
             const iconColor = getStatusColor(device.status);
             const iconName = getDeviceIconByName(device.name);
             
-            // Criação do ícone personalizado
+            // Criação do ícone personalizado - SIMPLIFICADO
             const customIcon = L.divIcon({
                 html: `<div class="marker-appear" style="
                     background-color: ${iconColor};
-                    width: 28px;
-                    height: 28px;
+                    width: 32px;
+                    height: 32px;
                     border-radius: 50%;
                     border: 3px solid white;
                     box-shadow: 0 0 10px rgba(0,0,0,0.6);
@@ -812,25 +808,24 @@
                     align-items: center;
                     justify-content: center;
                     color: white;
-                    font-size: 13px;
-                    font-weight: bold;
+                    font-size: 14px;
                     cursor: pointer;
-                    transition: transform 0.2s ease;
                 ">
                     <i class="fas fa-${iconName}"></i>
                 </div>`,
                 className: 'custom-marker',
-                iconSize: [32, 32],
-                iconAnchor: [16, 32]
+                iconSize: [38, 38],
+                iconAnchor: [19, 38]
             });
 
-            // Criação do marcador
+            // Criação do marcador COM CONFIGURAÇÕES CORRETAS
             const marker = L.marker([lat, lon], { 
                 icon: customIcon,
                 title: `${device.name} (${device.status})`,
                 draggable: false,
-                keyboard: false,
-                bubblingMouseEvents: false
+                // Configuração importante para evitar conflitos
+                bubblingMouseEvents: true, // Deve ser true para eventos funcionarem
+                interactive: true
             });
 
             // Adiciona o marcador ao grupo
@@ -838,7 +833,7 @@
             
             // Popup informativo simplificado
             const popupContent = `
-                <div style="min-width: 250px;">
+                <div style="min-width: 250px; padding: 5px;">
                     <h3 style="margin: 0 0 10px 0; color: #2c3e50; border-bottom: 2px solid ${iconColor}; padding-bottom: 5px;">
                         <i class="fas fa-${iconName}" style="color: ${iconColor}; margin-right: 8px;"></i> ${device.name}
                     </h3>
@@ -849,44 +844,76 @@
                 </div>
             `;
             
-            // Configura o popup
-            const popup = L.popup({
+            // Configura o popup CORRETAMENTE
+            marker.bindPopup(popupContent, {
                 className: 'custom-popup',
-                closeOnClick: true,    // Permite fechar ao clicar no mapa
-                autoClose: true,       // Fecha automaticamente ao abrir outro
-                closeButton: true,     // Mantém o botão de fechar
+                closeButton: true,
+                autoClose: false, // IMPORTANTE: não fecha automaticamente
+                closeOnEscapeKey: true,
+                closeOnClick: false, // IMPORTANTE: não fecha ao clicar no mapa
+                autoPan: true,
                 maxWidth: 300
-            }).setContent(popupContent);
-            
-            marker.bindPopup(popup);
-            
-            // Eventos simplificados e estáveis
-            marker.on('mouseover', function(e) {
-                this.openPopup();
+            });
+
+            // Eventos SIMPLIFICADOS e ESTÁVEIS
+            marker.on('mouseover', function() {
+                if (!this.isPopupOpen()) {
+                    this.openPopup();
+                }
+                // Apenas muda a aparência visual do ícone
                 if (this._icon) {
-                    this._icon.style.transform = 'scale(1.15)';
+                    this._icon.style.transform = 'scale(1.2)';
+                    this._icon.style.transition = 'transform 0.2s';
                     this._icon.style.zIndex = '1000';
                 }
-                L.DomEvent.stopPropagation(e);
             });
-            
-            marker.on('mouseout', function(e) {
+
+            marker.on('mouseout', function() {
+                // Apenas restaura a aparência visual do ícone
+                // NÃO fecha o popup no mouseout
                 if (this._icon) {
                     this._icon.style.transform = 'scale(1)';
                     this._icon.style.zIndex = 'auto';
                 }
-                // Não fecha automaticamente no mouseout
-                L.DomEvent.stopPropagation(e);
             });
-            
+
             marker.on('click', function(e) {
-                // Abre o popup deste marcador
-                this.openPopup();
+                // Fecha outros popups abertos
+                markers.forEach((otherMarker) => {
+                    if (otherMarker !== this && otherMarker.isPopupOpen()) {
+                        otherMarker.closePopup();
+                    }
+                });
+                
+                // Abre ou fecha o popup deste marcador
+                if (this.isPopupOpen()) {
+                    this.closePopup();
+                } else {
+                    this.openPopup();
+                }
+                
+                // Previne propagação para evitar conflitos
                 L.DomEvent.stopPropagation(e);
             });
 
+            // Previne que eventos do marcador se propaguem para o mapa
+            marker.on('mousedown', function(e) {
+                L.DomEvent.stopPropagation(e);
+            });
+
+            // Adiciona evento personalizado para fechar popups ao clicar no mapa
+            if (!map.hasEventListeners('click')) {
+                map.on('click', function() {
+                    markers.forEach((marker) => {
+                        if (marker.isPopupOpen()) {
+                            marker.closePopup();
+                        }
+                    });
+                });
+            }
+
             // Armazena o marcador no Map usando um ID único
-            const markerId = device.id || `${device.name}-${lat}-${lon}`;
+            const markerId = device.id || `${device.name}-${lat}-${lon}-${Date.now()}`;
             markers.set(markerId, marker);
             
             return marker;
