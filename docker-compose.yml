@@ -2,22 +2,30 @@ version: '3.8'
 
 services:
   backend:
-    build: ./backend
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: zabbix-map-backend
     restart: unless-stopped
     ports:
-      - "23001:3000"
-    env_file:
-      - .env
+      - "${BACKEND_PORT}:3000"
+    environment:
+      ZABBIX_API_URL: "${ZABBIX_API_URL}"
+      ZABBIX_AUTH_TOKEN: "${ZABBIX_AUTH_TOKEN}"
+      SERVER_IP: "${SERVER_IP}"
+      NODE_ENV: "${NODE_ENV:-production}"
+      PORT: "3000"
     networks:
       - zabbix-network
 
   frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: zabbix-map-frontend
     restart: unless-stopped
     ports:
-      - "23000:80"
+      - "${FRONTEND_PORT}:80"
     networks:
       - zabbix-network
 
