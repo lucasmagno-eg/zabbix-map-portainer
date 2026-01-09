@@ -8,7 +8,7 @@ const PORT = 3000;
 const ZABBIX_API_URL = process.env.ZABBIX_API_URL;
 const ZABBIX_AUTH_TOKEN = process.env.ZABBIX_AUTH_TOKEN;
 
-console.log('ZABBIX CONFIG CHECK:');
+console.log('ZABBIX CONFIG:');
 console.log('URL:', ZABBIX_API_URL);
 console.log('TOKEN:', ZABBIX_AUTH_TOKEN ? 'YES' : 'NO');
 
@@ -46,7 +46,6 @@ app.get('/api/token-test', async (req, res) => {
     res.json({
       ok: true,
       valid: response.data.result,
-      user: response.data.result ? response.data.result.username : null,
       message: response.data.result ? 'TOKEN OK' : 'TOKEN BAD'
     });
     
@@ -61,16 +60,14 @@ app.get('/api/token-test', async (req, res) => {
 app.get('/api/states', (req, res) => {
   res.json([
     { id: 'SP', name: 'Sao Paulo', lat: -23.5505, lon: -46.6333 },
-    { id: 'RJ', name: 'Rio de Janeiro', lat: -22.9068, lon: -43.1729 },
-    { id: 'MG', name: 'Minas Gerais', lat: -19.9167, lon: -43.9345 }
+    { id: 'RJ', name: 'Rio de Janeiro', lat: -22.9068, lon: -43.1729 }
   ]);
 });
 
 app.get('/api/devices', async (req, res) => {
   if (!ZABBIX_API_URL || !ZABBIX_AUTH_TOKEN) {
     return res.json([
-      { id: '1', name: 'Test SP', type: 'server', status: 'online', state: 'SP', lat: -23.5505, lon: -46.6333 },
-      { id: '2', name: 'Test RJ', type: 'router', status: 'warning', state: 'RJ', lat: -22.9068, lon: -43.1729 }
+      { id: '1', name: 'Test Device', type: 'server', status: 'online', state: 'SP', lat: -23.55, lon: -46.63 }
     ]);
   }
   
@@ -79,9 +76,9 @@ app.get('/api/devices', async (req, res) => {
       jsonrpc: '2.0',
       method: 'host.get',
       params: {
-        output: ['hostid', 'host', 'name'],
+        output: ['hostid', 'host'],
         filter: { status: '0' },
-        limit: 10
+        limit: 5
       },
       auth: ZABBIX_AUTH_TOKEN,
       id: 2
@@ -90,35 +87,26 @@ app.get('/api/devices', async (req, res) => {
     const hosts = response.data.result || [];
     const devices = hosts.map((host, i) => ({
       id: host.hostid,
-      name: host.name || host.host,
+      name: host.host,
       type: 'server',
       status: 'online',
       state: 'SP',
-      lat: -23.5505 + (Math.random() * 0.1),
-      lon: -46.6333 + (Math.random() * 0.1),
-      from_zabbix: true
+      lat: -23.55,
+      lon: -46.63
     }));
     
     res.json(devices);
     
   } catch (error) {
     res.json([
-      { id: 'error', name: 'Error: ' + error.message, type: 'server', status: 'offline', state: 'BR', lat: -15.7801, lon: -47.9292 }
+      { id: 'error', name: 'Error', type: 'server', status: 'offline' }
     ]);
   }
-});
-
-app.get('/api/zabbix-test', (req, res) => {
-  res.json({
-    url: ZABBIX_API_URL || 'not set',
-    token: ZABBIX_AUTH_TOKEN ? 'set' : 'not set'
-  });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log('Server running on port', PORT);
 });
 EOF
-
-echo 'Server.js created successfully'
+echo 'File created'
 "
