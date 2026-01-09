@@ -336,6 +336,15 @@
             border-bottom-right-radius: 10px !important;
         }
 
+        /* Estilo para garantir que os popups fiquem estáveis */
+        .leaflet-popup {
+            pointer-events: none !important;
+        }
+
+        .leaflet-popup-content-wrapper {
+            pointer-events: all !important;
+        }
+
         /* Scrollbar personalizada */
         ::-webkit-scrollbar {
             width: 8px;
@@ -763,7 +772,7 @@
         }
     }
     
-    // Função auxiliar para criar marcador
+    // Função auxiliar para criar marcador - CORRIGIDA
     function createMarker(device, lat, lon, index) {
         const iconColor = getStatusColor(device.status);
         const iconName = getDeviceIconByName(device.name);
@@ -788,6 +797,7 @@
                 font-weight: bold;
                 cursor: pointer;
                 position: relative;
+                transition: transform 0.2s ease;
             ">
                 <i class="fas fa-${iconName}"></i>
                 ${showNumber ? `<span style="position: absolute; top: -5px; right: -5px; background: white; color: #333; width: 16px; height: 16px; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center;">${groupIndex}</span>` : ''}
@@ -801,11 +811,13 @@
             icon: customIcon,
             title: `${device.name} (${device.status})`,
             draggable: false,
-            keyboard: false
+            keyboard: false,
+            // Importante: impede que eventos do marcador interfiram com o popup
+            bubblingMouseEvents: false
         }).addTo(map);
         
-        // Popup informativo
-        marker.bindPopup(`
+        // Popup informativo - APENAS COM STATUS, IP E ÚLTIMA VERIFICAÇÃO
+        const popupContent = `
             <div style="min-width: 280px; max-width: 300px;">
                 <h3 style="margin: 0 0 10px 0; color: #2c3e50; border-bottom: 2px solid ${iconColor}; padding-bottom: 5px;">
                     <i class="fas fa-${iconName}" style="color: ${iconColor}; margin-right: 8px;"></i> ${device.name}
@@ -813,34 +825,64 @@
                 <p><strong>Tipo:</strong> ${device.type}</p>
                 <p><strong>Status:</strong> <span style="background: ${iconColor}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">${device.status.toUpperCase()}</span></p>
                 <p><strong>IP:</strong> ${device.ip || 'N/A'}</p>
-                <p><strong>Coordenadas originais:</strong> ${device.lat.toFixed(6)}, ${device.lon.toFixed(6)}</p>
-                ${lat !== device.lat || lon !== device.lon ? `<p><strong>Coordenadas ajustadas:</strong> ${lat.toFixed(6)}, ${lon.toFixed(6)}</p>` : ''}
-                <p><strong>Distância do centro:</strong> ${device.distanceFromCenter || '0.00'}km</p>
                 <p><strong>Última verificação:</strong> ${formatDate(device.lastCheck)}</p>
                 <hr style="margin: 10px 0; border: none; border-top: 1px solid #eee;">
                 <p style="font-size: 0.8rem; color: #666;">
                     <i class="fas fa-info-circle"></i> Clique no mapa para fechar
                 </p>
             </div>
-        `);
+        `;
         
-        // Eventos simples
-        marker.on('mouseover', function() {
+        const popup = L.popup({
+            className: 'custom-popup',
+            closeOnClick: false,    // Não fecha ao clicar no mapa
+            autoClose: false,       // Não fecha automaticamente
+            closeButton: true,      // Mantém o botão de fechar
+            autoPan: true,          // Ajusta a visualização se necessário
+            // Configurações importantes para estabilidade
+            keepInView: true,
+            maxWidth: 300
+        }).setContent(popupContent);
+        
+        marker.bindPopup(popup);
+        
+        // Eventos corrigidos para evitar que o marcador suma
+        marker.on('mouseover', function(e) {
             this.openPopup();
-            this._icon.style.transform = 'scale(1.15)';
-            this._icon.style.zIndex = '1000';
+            if (this._icon) {
+                this._icon.style.transform = 'scale(1.15)';
+                this._icon.style.zIndex = '1000';
+            }
+            // Previne propagação para outros elementos
+            L.DomEvent.stopPropagation(e);
         });
         
-        marker.on('mouseout', function() {
-            this._icon.style.transform = 'scale(1)';
-            this._icon.style.zIndex = 'auto';
+        marker.on('mouseout', function(e) {
+            if (this._icon) {
+                this._icon.style.transform = 'scale(1)';
+                this._icon.style.zIndex = 'auto';
+            }
+            // Não fecha o popup no mouseout - só fecha ao clicar no mapa
+            L.DomEvent.stopPropagation(e);
         });
         
-        marker.on('click', function() {
+        marker.on('click', function(e) {
             // Fecha outros popups
             markers.forEach(m => {
                 if (m !== this && m.isPopupOpen()) {
                     m.closePopup();
+                }
+            });
+            // Abre o popup deste marcador
+            this.openPopup();
+            L.DomEvent.stopPropagation(e);
+        });
+
+        // Evento para fechar popup ao clicar no mapa (não no marcador)
+        map.on('click', function() {
+            markers.forEach(marker => {
+                if (marker.isPopupOpen()) {
+                    marker.closePopup();
                 }
             });
         });
