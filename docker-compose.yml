@@ -9,7 +9,7 @@ services:
       - "23001:3000"
     environment:
       - ZABBIX_API_URL=http://172.17.17.53/zabbix/api_jsonrpc.php
-      - ZABBIX_AUTH_TOKEN=0663e920534f56sd4f6sdf4dsff46sd8fs8d6faa90c069722fd
+      - ZABBIX_AUTH_TOKEN=0663e9206b9242cac6d47c5b752b57e0cc43b2bdffeaf7d06b5aa90c069722fd
       - SERVER_IP=172.17.17.10
       - NODE_ENV=production
     networks:
