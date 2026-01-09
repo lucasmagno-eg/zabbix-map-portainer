@@ -23,7 +23,7 @@
         .container {
             max-width: 1600px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 15px;
             height: 100vh;
             display: flex;
             flex-direction: column;
@@ -31,13 +31,13 @@
 
         header {
             text-align: center;
-            padding: 15px 0;
-            margin-bottom: 20px;
+            padding: 10px 0;
+            margin-bottom: 15px;
         }
 
         header h1 {
             color: #4a9eff;
-            font-size: 2.2rem;
+            font-size: 1.8rem;
             margin-bottom: 5px;
             display: flex;
             align-items: center;
@@ -51,13 +51,13 @@
 
         .subtitle {
             color: #a5d6ff;
-            font-size: 1rem;
+            font-size: 0.9rem;
         }
 
         .dashboard {
             display: grid;
-            grid-template-columns: 3fr 1fr;
-            gap: 20px;
+            grid-template-columns: 2fr 1fr;
+            gap: 15px;
             flex-grow: 1;
             min-height: 0;
         }
@@ -70,9 +70,9 @@
 
         .map-container {
             background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
@@ -82,36 +82,36 @@
 
         #map {
             flex-grow: 1;
-            border-radius: 10px;
+            border-radius: 8px;
             border: 2px solid #4a9eff;
-            min-height: 500px;
+            min-height: 400px;
         }
 
         .map-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .map-header h2 {
             color: #4a9eff;
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .device-count {
             background: rgba(74, 158, 255, 0.1);
-            padding: 8px 15px;
+            padding: 6px 12px;
             border-radius: 20px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .device-count i {
@@ -126,9 +126,9 @@
 
         .panel {
             background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.1);
             height: 100%;
             display: flex;
@@ -137,13 +137,13 @@
 
         .panel h2 {
             color: #4a9eff;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 1.3rem;
+            font-size: 1.1rem;
         }
 
         .panel h2 i {
@@ -153,22 +153,23 @@
         .device-list {
             flex-grow: 1;
             overflow-y: auto;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            max-height: 600px;
         }
 
         .device-item {
             background: rgba(255, 255, 255, 0.05);
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            border-left: 4px solid #4a9eff;
-            transition: all 0.3s;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid #4a9eff;
+            transition: all 0.2s;
             cursor: pointer;
         }
 
         .device-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateX(5px);
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(3px);
             border-left-color: #ffa726;
         }
 
@@ -176,22 +177,22 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .device-name {
             font-weight: bold;
             color: #fff;
-            font-size: 1rem;
+            font-size: 0.95rem;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .device-status {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.75rem;
             font-weight: bold;
         }
 
@@ -200,21 +201,35 @@
         .status-offline { background: #e74c3c; color: white; }
 
         .device-details {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: #b0b0b0;
-            line-height: 1.4;
+            line-height: 1.3;
         }
 
         .device-details div {
-            margin-bottom: 4px;
+            margin-bottom: 3px;
+        }
+
+        .device-type {
+            color: #4a9eff;
+            font-weight: bold;
+        }
+
+        .device-ip {
+            color: #ffa726;
+        }
+
+        .device-time {
+            color: #a5d6ff;
+            font-size: 0.75rem;
         }
 
         .controls {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 15px;
-            padding-top: 15px;
+            margin-top: 12px;
+            padding-top: 12px;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
@@ -222,38 +237,38 @@
             background: linear-gradient(135deg, #4a9eff, #2c5aa0);
             color: white;
             border: none;
-            padding: 12px 25px;
+            padding: 10px 20px;
             border-radius: 50px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             display: flex;
             align-items: center;
-            gap: 10px;
-            transition: all 0.3s;
+            gap: 8px;
+            transition: all 0.2s;
         }
 
         .refresh-btn:hover {
             background: linear-gradient(135deg, #2c5aa0, #4a9eff);
-            transform: scale(1.05);
+            transform: scale(1.03);
         }
 
         .legend {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             flex-wrap: wrap;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 0.85rem;
+            gap: 5px;
+            font-size: 0.8rem;
         }
 
         .legend-color {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
         }
 
@@ -263,24 +278,25 @@
 
         .loading {
             text-align: center;
-            padding: 30px;
-            font-size: 1.1rem;
+            padding: 20px;
+            font-size: 1rem;
             color: #4a9eff;
         }
 
         .error {
             color: #e74c3c;
-            padding: 15px;
+            padding: 12px;
             text-align: center;
             background: rgba(231, 76, 60, 0.1);
-            border-radius: 10px;
-            margin: 15px 0;
+            border-radius: 8px;
+            margin: 10px 0;
             border: 1px solid rgba(231, 76, 60, 0.3);
+            font-size: 0.9rem;
         }
 
         .error i {
-            font-size: 1.5rem;
-            margin-bottom: 10px;
+            font-size: 1.2rem;
+            margin-bottom: 8px;
         }
 
         /* Área do polígono */
@@ -293,17 +309,17 @@
 
         /* Scrollbar personalizada */
         ::-webkit-scrollbar {
-            width: 8px;
+            width: 6px;
         }
 
         ::-webkit-scrollbar-track {
             background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
+            border-radius: 6px;
         }
 
         ::-webkit-scrollbar-thumb {
             background: linear-gradient(180deg, #4a9eff, #2c5aa0);
-            border-radius: 10px;
+            border-radius: 6px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
@@ -318,29 +334,33 @@
             }
             
             header h1 {
-                font-size: 1.8rem;
+                font-size: 1.5rem;
             }
             
             .dashboard {
                 grid-template-columns: 1fr;
-                gap: 15px;
+                gap: 10px;
             }
             
             .map-container {
-                padding: 15px;
+                padding: 12px;
             }
             
             #map {
-                min-height: 400px;
+                min-height: 350px;
             }
             
             .controls {
                 flex-direction: column;
-                gap: 15px;
+                gap: 12px;
             }
             
             .legend {
                 justify-content: center;
+            }
+            
+            .device-list {
+                max-height: 400px;
             }
         }
     </style>
@@ -410,49 +430,6 @@
         let markers = [];
         let deviceData = [];
 
-        // Mapeamento de ícones
-        const DEVICE_ICONS = {
-            'galpão': 'warehouse',
-            'galpao': 'warehouse',
-            'portaria': 'door-closed',
-            'alojamento': 'bed',
-            'tic': 'desktop',
-            'gbtech': 'laptop-code',
-            'rh': 'users',
-            'apoio': 'hands-helping',
-            'apoio operacional': 'hands-helping',
-            'administração': 'user-tie',
-            'administracao': 'user-tie',
-            'adm': 'user-tie',
-            'router': 'wifi',
-            'switch': 'sitemap',
-            'server': 'server',
-            'firewall': 'shield-alt',
-            'default': 'desktop'
-        };
-
-        function getDeviceIconByName(deviceName) {
-            if (!deviceName) return 'desktop';
-            const nameLower = deviceName.toLowerCase();
-            for (const [keyword, icon] of Object.entries(DEVICE_ICONS)) {
-                if (nameLower.includes(keyword)) return icon;
-            }
-            return DEVICE_ICONS.default;
-        }
-
-        // Função para criar um pequeno deslocamento para dispositivos próximos
-        function calculateOffset(index, total, baseLat, baseLon) {
-            if (total <= 1) return { lat: baseLat, lon: baseLon };
-            
-            const radius = 0.000015;
-            const angle = (2 * Math.PI * index) / total;
-            
-            return {
-                lat: baseLat + (radius * Math.cos(angle)),
-                lon: baseLon + (radius * Math.sin(angle))
-            };
-        }
-
         // Inicialização do mapa
         function initMap() {
             map = L.map('map', {
@@ -498,7 +475,7 @@
                 if (!devicesResponse.ok) throw new Error('Erro ao carregar dados');
                 deviceData = await devicesResponse.json();
                 
-                // Se não houver dados, usa dados de exemplo
+                // Se não houver dados, usa dados de exemplo baseados na imagem
                 if (!deviceData || deviceData.length === 0) {
                     deviceData = getSampleDevices();
                 }
@@ -519,74 +496,96 @@
             }
         }
 
-        // Dados de exemplo para demonstração
+        // Dados de exemplo baseados na imagem
         function getSampleDevices() {
             return [
                 {
                     id: 1,
-                    name: "ROTEADOR ARUBA - ADM",
+                    name: "ROTEADOR ARUBA - DRIEDERIA",
                     type: "router",
-                    ip: "10.1.18.60",
+                    ip: "10.1.6.2",
                     status: "online",
                     lat: -3.791509,
                     lon: -38.510858,
-                    lastCheck: new Date().toISOString(),
-                    description: "Roteador principal da administração"
+                    lastCheck: "2025-01-09T13:57:47",
+                    description: "Roteador da Driederia"
                 },
                 {
                     id: 2,
-                    name: "ROTEADOR ARUBA - TIC",
+                    name: "ROTEADOR ARUBA - GALPAO",
                     type: "router",
-                    ip: "10.1.16.5",
+                    ip: "10.1.15.31",
                     status: "online",
-                    lat: -3.791510,
-                    lon: -38.510860,
-                    lastCheck: new Date().toISOString(),
-                    description: "Roteador do departamento de TIC"
+                    lat: -3.791515,
+                    lon: -38.510850,
+                    lastCheck: "2025-01-09T13:57:47",
+                    description: "Roteador do Galpão"
                 },
                 {
                     id: 3,
+                    name: "ROTEADOR ARUBA - MANUTENCAO",
+                    type: "router",
+                    ip: "10.1.17.14",
+                    status: "online",
+                    lat: -3.791520,
+                    lon: -38.510865,
+                    lastCheck: "2025-01-09T13:57:47",
+                    description: "Roteador da Manutenção"
+                },
+                {
+                    id: 4,
+                    name: "ROTEADOR ARUBA - PORTARIA",
+                    type: "router",
+                    ip: "10.1.15.04",
+                    status: "online",
+                    lat: -3.791525,
+                    lon: -38.510870,
+                    lastCheck: "2025-01-09T13:57:47",
+                    description: "Roteador da Portaria"
+                },
+                {
+                    id: 5,
+                    name: "ROTEADOR ARUBA - APOIO OPERACIONAL",
+                    type: "router",
+                    ip: "10.1.16.107",
+                    status: "online",
+                    lat: -3.791530,
+                    lon: -38.510875,
+                    lastCheck: "2025-01-09T13:57:47",
+                    description: "Roteador do Apoio Operacional"
+                },
+                {
+                    id: 6,
+                    name: "ROTEADOR ARUBA - ADM",
+                    type: "router",
+                    ip: "10.1.18.60",
+                    status: "warning",
+                    lat: -3.791500,
+                    lon: -38.510845,
+                    lastCheck: new Date().toISOString(),
+                    description: "Roteador da Administração"
+                },
+                {
+                    id: 7,
+                    name: "ROTEADOR ARUBA - TIC",
+                    type: "router",
+                    ip: "10.1.16.5",
+                    status: "offline",
+                    lat: -3.791505,
+                    lon: -38.510840,
+                    lastCheck: new Date().toISOString(),
+                    description: "Roteador do TIC"
+                },
+                {
+                    id: 8,
                     name: "SWITCH CORE - DATACENTER",
                     type: "switch",
                     ip: "10.1.10.1",
                     status: "online",
-                    lat: -3.791508,
-                    lon: -38.510862,
+                    lat: -3.791535,
+                    lon: -38.510880,
                     lastCheck: new Date().toISOString(),
                     description: "Switch core do datacenter"
-                },
-                {
-                    id: 4,
-                    name: "FIREWALL - PERIMETRO",
-                    type: "firewall",
-                    ip: "10.1.1.1",
-                    status: "online",
-                    lat: -3.791512,
-                    lon: -38.510856,
-                    lastCheck: new Date().toISOString(),
-                    description: "Firewall de perímetro"
-                },
-                {
-                    id: 5,
-                    name: "SERVIDOR AD - DOMINIO",
-                    type: "server",
-                    ip: "10.1.20.10",
-                    status: "online",
-                    lat: -3.791506,
-                    lon: -38.510864,
-                    lastCheck: new Date().toISOString(),
-                    description: "Servidor de domínio Active Directory"
-                },
-                {
-                    id: 6,
-                    name: "ACCESS POINT - GALPÃO",
-                    type: "wifi",
-                    ip: "10.1.30.50",
-                    status: "online",
-                    lat: -3.791514,
-                    lon: -38.510854,
-                    lastCheck: new Date().toISOString(),
-                    description: "Access point do galpão principal"
                 }
             ];
         }
@@ -627,21 +626,20 @@
             }
 
             deviceList.innerHTML = devicesInArea.map(device => {
-                const iconName = getDeviceIconByName(device.name);
                 return `
                     <div class="device-item" data-device-id="${device.id}">
                         <div class="device-header">
                             <div class="device-name">
-                                <i class="fas fa-${iconName}"></i> ${device.name}
+                                <i class="fas fa-wifi"></i> ${device.name}
                             </div>
                             <div class="device-status status-${device.status}">
                                 ${device.status === 'online' ? 'ONLINE' : device.status === 'warning' ? 'ATENÇÃO' : 'OFFLINE'}
                             </div>
                         </div>
                         <div class="device-details">
-                            <div><strong>Tipo:</strong> ${device.type || 'Equipamento de Rede'}</div>
-                            <div><strong>IP:</strong> ${device.ip || 'N/A'}</div>
-                            <div><strong>Última verificação:</strong> ${formatDate(device.lastCheck)}</div>
+                            <div><span class="device-type">Tipo:</span> ${device.type || 'router'}</div>
+                            <div><span class="device-ip">IP:</span> ${device.ip || 'N/A'}</div>
+                            <div class="device-time">Última verificação: ${formatDate(device.lastCheck)}</div>
                         </div>
                     </div>
                 `;
@@ -666,7 +664,7 @@
             });
         }
 
-        // Plota dispositivos com spiderfying para coordenadas próximos
+        // Plota dispositivos no mapa
         function plotDevicesOnMap() {
             // Remove marcadores antigos
             markers.forEach(marker => map.removeLayer(marker));
@@ -674,48 +672,20 @@
 
             const devicesInArea = deviceData.filter(d => d.inArea && d.lat && d.lon);
             
-            // Agrupa dispositivos por coordenadas
-            const coordinateGroups = {};
-            
-            devicesInArea.forEach((device, index) => {
-                const latKey = device.lat.toFixed(6);
-                const lonKey = device.lon.toFixed(6);
-                const coordKey = `${latKey}_${lonKey}`;
-                
-                if (!coordinateGroups[coordKey]) {
-                    coordinateGroups[coordKey] = [];
-                }
-                coordinateGroups[coordKey].push({ device, index });
-            });
-            
-            // Cria marcadores com offset para grupos
-            Object.keys(coordinateGroups).forEach(coordKey => {
-                const group = coordinateGroups[coordKey];
-                
-                if (group.length === 1) {
-                    const { device } = group[0];
-                    const marker = createMarker(device, device.lat, device.lon);
-                    if (marker) markers.push(marker);
-                } else {
-                    group.forEach(({ device, index }) => {
-                        const offset = calculateOffset(index, group.length, device.lat, device.lon);
-                        const marker = createMarker(device, offset.lat, offset.lon);
-                        if (marker) markers.push(marker);
-                    });
-                }
+            devicesInArea.forEach((device) => {
+                const marker = createMarker(device, device.lat, device.lon);
+                if (marker) markers.push(marker);
             });
 
-            // Ajusta visualização
+            // Ajusta visualização se houver marcadores
             if (markers.length > 0) {
                 const group = new L.featureGroup(markers);
                 const bounds = group.getBounds();
                 
                 if (bounds.isValid()) {
-                    map.fitBounds(bounds.pad(0.3), {
+                    map.fitBounds(bounds.pad(0.2), {
                         animate: true,
                         duration: 1,
-                        paddingTopLeft: [50, 50],
-                        paddingBottomRight: [50, 50],
                         maxZoom: 18
                     });
                 }
@@ -725,28 +695,27 @@
         // Cria marcador
         function createMarker(device, lat, lon) {
             const iconColor = getStatusColor(device.status);
-            const iconName = getDeviceIconByName(device.name);
             
             // Criação do ícone
             const customIcon = L.divIcon({
                 html: `<div style="
                     background-color: ${iconColor};
-                    width: 32px;
-                    height: 32px;
+                    width: 28px;
+                    height: 28px;
                     border-radius: 50%;
-                    border: 3px solid white;
-                    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+                    border: 2px solid white;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     color: white;
-                    font-size: 14px;
+                    font-size: 12px;
                 ">
-                    <i class="fas fa-${iconName}"></i>
+                    <i class="fas fa-wifi"></i>
                 </div>`,
                 className: 'device-marker',
-                iconSize: [38, 38],
-                iconAnchor: [19, 38]
+                iconSize: [32, 32],
+                iconAnchor: [16, 32]
             });
 
             const marker = L.marker([lat, lon], { 
@@ -756,19 +725,19 @@
             
             // Popup simplificado
             const popupContent = `
-                <div style="padding: 12px; min-width: 220px;">
-                    <h4 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 1.1rem;">
-                        <i class="fas fa-${iconName}" style="color: ${iconColor}; margin-right: 8px;"></i> 
+                <div style="padding: 10px; min-width: 200px;">
+                    <h4 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 1rem;">
+                        <i class="fas fa-wifi" style="color: ${iconColor}; margin-right: 6px;"></i> 
                         ${device.name}
                     </h4>
-                    <p style="margin: 6px 0; font-size: 0.9rem;"><strong>Status:</strong> 
-                        <span style="background: ${iconColor}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold;">
+                    <p style="margin: 5px 0; font-size: 0.85rem;"><strong>Status:</strong> 
+                        <span style="background: ${iconColor}; color: white; padding: 2px 6px; border-radius: 8px; font-size: 0.7rem; font-weight: bold;">
                             ${device.status.toUpperCase()}
                         </span>
                     </p>
-                    <p style="margin: 6px 0; font-size: 0.9rem;"><strong>IP:</strong> ${device.ip || 'N/A'}</p>
-                    <p style="margin: 6px 0; font-size: 0.9rem;"><strong>Tipo:</strong> ${device.type || 'Equipamento de Rede'}</p>
-                    <p style="margin: 6px 0; font-size: 0.9rem;"><strong>Última verificação:</strong><br>${formatDate(device.lastCheck)}</p>
+                    <p style="margin: 5px 0; font-size: 0.85rem;"><strong>IP:</strong> ${device.ip || 'N/A'}</p>
+                    <p style="margin: 5px 0; font-size: 0.85rem;"><strong>Tipo:</strong> ${device.type || 'router'}</p>
+                    <p style="margin: 5px 0; font-size: 0.85rem;"><strong>Última verificação:</strong><br>${formatDate(device.lastCheck)}</p>
                 </div>
             `;
             
@@ -804,7 +773,9 @@
             if (!dateString) return 'N/A';
             try {
                 const date = new Date(dateString);
-                return date.toLocaleTimeString('pt-BR') + ' - ' + date.toLocaleDateString('pt-BR');
+                const time = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const dateFormatted = date.toLocaleDateString('pt-BR');
+                return `${time} · ${dateFormatted}`;
             } catch (e) {
                 return 'N/A';
             }
@@ -823,7 +794,7 @@
         // Inicialização
         document.addEventListener('DOMContentLoaded', initMap);
         
-        // Atualização automática
+        // Atualização automática a cada 60 segundos
         setInterval(loadData, 60000);
     </script>
 </body>
