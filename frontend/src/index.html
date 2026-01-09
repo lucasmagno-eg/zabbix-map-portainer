@@ -393,10 +393,16 @@
 
         // Inicialização do mapa
         function initMap() {
-            map = L.map('map').setView(MONITORING_AREA.center, MONITORING_AREA.zoom);
+            map = L.map('map', {
+                zoomControl: true,
+                maxZoom: 20,
+                minZoom: 16 // Diminuí o zoom mínimo para permitir mais zoom out
+            }).setView(MONITORING_AREA.center, MONITORING_AREA.zoom);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 20,
+                minZoom: 15
             }).addTo(map);
 
             // Cria área de monitoramento
@@ -521,7 +527,7 @@
             }).join('');
         }
 
-        // Plota dispositivos - VERSÃO SIMPLIFICADA E FUNCIONAL
+        // Plota dispositivos
         function plotDevicesOnMap() {
             // Remove marcadores antigos
             markers.forEach(marker => map.removeLayer(marker));
@@ -536,19 +542,37 @@
                 }
             });
 
-            // Ajusta visualização
+            // Ajusta visualização com MAIS ZOOM OUT para mostrar todos os 12 equipamentos
             if (markers.length > 0) {
                 const group = new L.featureGroup(markers);
-                map.fitBounds(group.getBounds().pad(0.1));
+                const bounds = group.getBounds();
+                
+                if (bounds.isValid()) {
+                    // Usa um padding menor e ajusta o zoom para mostrar mais área
+                    map.fitBounds(bounds.pad(0.3), { // Aumentei o padding de 0.1 para 0.3
+                        animate: true,
+                        duration: 1,
+                        paddingTopLeft: [50, 50],
+                        paddingBottomRight: [50, 50],
+                        maxZoom: 19 // Limite máximo de zoom para não ficar muito próximo
+                    });
+                    
+                    // Se ainda estiver muito zoomado, força um zoom menor
+                    setTimeout(() => {
+                        if (map.getZoom() > 17) {
+                            map.setZoom(17, { animate: true });
+                        }
+                    }, 500);
+                }
             }
         }
 
-        // Cria marcador - VERSÃO CORRIGIDA PARA NÃO SUMIR
+        // Cria marcador
         function createMarker(device) {
             const iconColor = getStatusColor(device.status);
             const iconName = getDeviceIconByName(device.name);
             
-            // Criação SIMPLES do ícone
+            // Criação do ícone
             const customIcon = L.divIcon({
                 html: `<div style="
                     background-color: ${iconColor};
@@ -575,7 +599,7 @@
                 title: device.name
             }).addTo(map);
             
-            // Popup SIMPLES
+            // Popup
             const popupContent = `
                 <div style="padding: 10px; min-width: 200px;">
                     <h4 style="margin: 0 0 10px 0; color: #2c3e50;">
@@ -594,7 +618,7 @@
             
             marker.bindPopup(popupContent);
             
-            // Eventos MÍNIMOS e FUNCIONAIS
+            // Eventos
             marker.on('mouseover', function() {
                 this.openPopup();
             });
